@@ -1,0 +1,128 @@
+from __future__ import annotations
+
+import aiosqlite
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
+from contextlib import asynccontextmanager
+
+
+@dataclass(frozen=True)
+class DBConfig:
+    path: str  # sqlite file path, e.g. "shop.db"
+
+
+class Database:
+    """
+    Единая точка входа в БД: всегда включает foreign_keys и Row factory.
+    """
+    def __init__(self, config: DBConfig):
+        self.config = config
+
+    @asynccontextmanager
+    async def conn(self) -> aiosqlite.Connection:
+        connection = await aiosqlite.connect(self.config.path)
+        try:
+            await connection.execute("PRAGMA foreign_keys = ON;")
+            connection.row_factory = aiosqlite.Row
+            yield connection
+        finally:
+            await connection.close()
+
+    async def init_schema(self, schema_path: Optional[str] = None) -> None:
+        if schema_path is None:
+            schema_path = str(Path(__file__).with_name("schema.sql"))
+
+        sql = Path(schema_path).read_text(encoding="utf-8")
+        async with self.conn() as connection:
+            await connection.executescript(sql)
+            # ✅ ДОБАВЬ ЭТО:
+            await self._migrate(connection)
+
+            await connection.commit()
+    
+    async def _migrate(self, connection: aiosqlite.Connection) -> None:
+        async def has_column(table: str, col: str) -> bool:
+            cur = await connection.execute(f"PRAGMA table_info({table})")
+            rows = await cur.fetchall()
+            return any(r["name"] == col for r in rows)
+
+        async def add_column(table: str, col: str, ddl: str) -> None:
+            if not await has_column(table, col):
+                await connection.execute(f"ALTER TABLE {table} ADD COLUMN {ddl};")
+
+        # categories: нормализованное имя для поиска/дедупликации
+        await add_column("categories", "name_norm", "name_norm TEXT DEFAULT ''")
+
+        # products: поля под поиск и импорт
+        await add_column("products", "name_norm", "name_norm TEXT DEFAULT ''")
+        await add_column("products", "keywords_norm", "keywords_norm TEXT DEFAULT ''")
+        await add_column("products", "unit", "unit TEXT DEFAULT 'шт'")
+        await add_column("products", "barcode", "barcode TEXT DEFAULT ''")
+        await add_column("products", "updated_at", "updated_at DATETIME")
+
+        await connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS client_profiles (
+                user_id INTEGER PRIMARY KEY,
+                full_name TEXT DEFAULT '',
+                phone TEXT DEFAULT '',
+                address TEXT DEFAULT ''
+            )
+            """
+        )
+        await connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS search_synonyms (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                shop_id INTEGER,
+                term TEXT NOT NULL,
+                synonym TEXT NOT NULL,
+                FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+            )
+            """
+        )
+        await connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS promotions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                shop_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                is_active INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+            )
+            """
+        )
+        await connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS promotion_items (
+                promo_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                PRIMARY KEY (promo_id, product_id),
+                FOREIGN KEY (promo_id) REFERENCES promotions(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+            )
+            """
+        )
+        await connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS order_chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id INTEGER NOT NULL,
+                sender_user_id INTEGER NOT NULL,
+                sender_role TEXT NOT NULL,
+                message_text TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+            )
+            """
+        )
+
+        await connection.execute("CREATE INDEX IF NOT EXISTS idx_products_name_norm ON products(name_norm);")
+        await connection.execute("CREATE INDEX IF NOT EXISTS idx_products_keywords_norm ON products(keywords_norm);")
+        await connection.execute("CREATE INDEX IF NOT EXISTS idx_search_synonyms_term ON search_synonyms(term);")
+        await connection.execute("CREATE INDEX IF NOT EXISTS idx_promotions_shop ON promotions(shop_id);")
+        await connection.execute("CREATE INDEX IF NOT EXISTS idx_promo_items_promo ON promotion_items(promo_id);")
+        await connection.execute("CREATE INDEX IF NOT EXISTS idx_chat_order ON order_chat_messages(order_id, created_at);")
