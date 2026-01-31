@@ -24,15 +24,19 @@ class ClientChatStates(StatesGroup):
 def kb_order_card(order_id: int, back_cb: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💬 Чат по заказу", callback_data=f"c:chat:{order_id}")],
-        [InlineKeyboardButton(text="🔙 Назад", callback_data=back_cb)],
-        [InlineKeyboardButton(text="🏠 Главная", callback_data="c:home")],
+        [
+            InlineKeyboardButton(text="🏠 Главная", callback_data="c:home"),
+            InlineKeyboardButton(text="🔙 Назад", callback_data=back_cb),
+        ],
     ])
 
 
 def kb_chat_nav(order_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Назад", callback_data=f"c:order:{order_id}")],
-        [InlineKeyboardButton(text="🏠 Главная", callback_data="c:home")],
+        [
+            InlineKeyboardButton(text="🏠 Главная", callback_data="c:home"),
+            InlineKeyboardButton(text="🔙 Назад", callback_data=f"c:order:{order_id}"),
+        ],
     ])
 
 
