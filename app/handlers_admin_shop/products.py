@@ -238,8 +238,10 @@ async def add_product_prompt(cq: CallbackQuery, state: FSMContext, db: Database)
         "Пример:\n"
         "Молоко 2.5%; 12.5",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔙 Назад", callback_data=f"a:pcat:{cat_id}")],
-            [InlineKeyboardButton(text="🏠 Главная", callback_data="a:home")],
+            [
+                InlineKeyboardButton(text="🏠 Главная", callback_data="a:home"),
+                InlineKeyboardButton(text="🔙 Назад", callback_data=f"a:pcat:{cat_id}"),
+            ],
         ])
     )
     await cq.answer()
@@ -465,8 +467,10 @@ async def bulk_import_prompt(cq: CallbackQuery, state: FSMContext, db: Database)
             "Загрузите CSV файл с товарами.\n"
             "Формат строк: Название; Цена; Описание (опционально).",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔙 Назад", callback_data=f"a:pcat:{cat_id}")],
-                [InlineKeyboardButton(text="🏠 Главная", callback_data="a:home")],
+                [
+                    InlineKeyboardButton(text="🏠 Главная", callback_data="a:home"),
+                    InlineKeyboardButton(text="🔙 Назад", callback_data=f"a:pcat:{cat_id}"),
+                ],
             ]),
         )
         await cq.answer()

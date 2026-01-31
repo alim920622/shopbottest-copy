@@ -10,6 +10,7 @@ from app.handlers_admin_shop.utils import get_admin_shop_ids, is_shop_admin
 from app.repositories.chat_repo import ChatRepo
 from app.repositories.orders_repo import OrdersRepo
 from app.handlers_admin_shop.start import kb_admin_main
+from app.ui.nav import kb_nav
 
 router = Router()
 
@@ -27,10 +28,7 @@ def kb_chat_list(order_ids: list[int]) -> InlineKeyboardMarkup:
 
 
 def kb_chat_nav(order_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Назад", callback_data="a:chat")],
-        [InlineKeyboardButton(text="🏠 Главная", callback_data="a:home")],
-    ])
+    return kb_nav(home_cb="a:home", back_cb="a:chat")
 
 
 @router.callback_query(F.data == "a:chat")
@@ -119,4 +117,4 @@ async def send_chat_message(message: Message, state: FSMContext, db: Database):
     except Exception:
         pass
 
-    await message.answer("Сообщение отправлено.")
+    await message.answer("Сообщение отправлено.", reply_markup=kb_chat_nav(order_id))

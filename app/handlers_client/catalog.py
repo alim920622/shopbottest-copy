@@ -23,6 +23,7 @@ from app.handlers_client.kb import (
     kb_cart,
     kb_cart_empty,
     kb_checkout_choose_shop,
+    kb_checkout_confirm,
     kb_after_order,
 )
 
@@ -500,9 +501,9 @@ async def checkout(cq: CallbackQuery, db: Database, state: FSMContext):
         return
 
     shop_ids = sorted({int(i["shop_id"]) for i in items})
+    await state.update_data(checkout_shop_ids=shop_ids)
     if len(shop_ids) == 1:
-        # оформляем сразу
-        await _create_order_for_shop(cq, db, shop_ids[0])
+        await _render_checkout_confirm(cq, db, state, shop_ids[0], back_cb="c:back:cart")
         return
 
     # если в корзине товары из разных точек — выбрать
@@ -514,6 +515,63 @@ async def checkout(cq: CallbackQuery, db: Database, state: FSMContext):
 
 
 @router.callback_query(F.data.startswith("c:checkout_shop:"))
+async def checkout_pick_shop(cq: CallbackQuery, db: Database, state: FSMContext):
+    shop_id = int(cq.data.split(":")[2])
+    await _render_checkout_confirm(cq, db, state, shop_id, back_cb="c:checkout_back")
+
+
+@router.callback_query(F.data == "c:checkout_back")
+async def checkout_back(cq: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    shop_ids = data.get("checkout_shop_ids") or []
+    if shop_ids:
+        await cq.message.edit_text(
+            "В корзине товары из разных магазинов/ресторанов. Выберите, для какой точки оформить заказ:",
+            reply_markup=kb_checkout_choose_shop(shop_ids),
+        )
+        await cq.answer()
+        return
+    await cq.message.edit_text("Корзина пуста.", reply_markup=kb_back("cart_menu"))
+    await cq.answer()
+
+
+@router.callback_query(F.data.startswith("c:checkout_confirm:"))
+async def checkout_confirm(cq: CallbackQuery, db: Database, state: FSMContext):
+    shop_id = int(cq.data.split(":")[2])
+    await _create_order_for_shop(cq, db, shop_id)
+
+
+async def _render_checkout_confirm(
+    cq: CallbackQuery,
+    db: Database,
+    state: FSMContext,
+    shop_id: int,
+    back_cb: str,
+):
+    cart = CartRepo(db)
+    data = await state.get_data()
+    items = await cart.list_items(cq.from_user.id, business_type=data.get("cart_kind"))
+    shop_items = [it for it in items if int(it["shop_id"]) == shop_id]
+    if not shop_items:
+        await cq.message.edit_text("Корзина пуста для этой точки.", reply_markup=kb_back("cart_menu"))
+        await cq.answer()
+        return
+    total = sum(float(i["price"]) * int(i["quantity"]) for i in shop_items)
+    lines = ["Подтвердите оформление заказа:"]
+    for i in shop_items:
+        line_total = float(i["price"]) * int(i["quantity"])
+        lines.append(f"- {i['name']} x{i['quantity']} = {line_total}")
+    lines.append(f"\nИтого: {total}")
+    await cq.message.edit_text(
+        "\n".join(lines),
+        reply_markup=kb_checkout_confirm(
+            confirm_cb=f"c:checkout_confirm:{shop_id}",
+            back_cb=back_cb,
+        ),
+    )
+    await cq.answer()
+
+
 async def _create_order_for_shop(cq: CallbackQuery, db: Database, shop_id: int):
     orders = OrdersRepo(db)
 
@@ -522,7 +580,7 @@ async def _create_order_for_shop(cq: CallbackQuery, db: Database, shop_id: int):
         order_id = await orders.create_order_from_cart(shop_id=shop_id, client_user_id=cq.from_user.id)
     except ValueError:
         await cq.message.edit_text(
-            "Не удалось создать заказ: корзина пуста для этой точки.",
+            "Не удалось создать заказ: корзина пуста или заказ уже создан для этой точки.",
             reply_markup=kb_back("main"),
         )
         await cq.answer()
