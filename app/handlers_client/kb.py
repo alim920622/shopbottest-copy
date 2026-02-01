@@ -27,6 +27,13 @@ def kb_back(to: str) -> InlineKeyboardMarkup:
     ])
 
 
+def kb_inline_search(back_cb: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔎 Открыть inline", switch_inline_query_current_chat="")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data=back_cb)],
+    ])
+
+
 def kb_shops_list(items: list[dict], kind: str) -> InlineKeyboardMarkup:
     """
     kind: 'shop' | 'restaurant'
@@ -51,6 +58,7 @@ def kb_categories_list(categories: list[dict], kind: str, shop_id: int) -> Inlin
     for c in categories:
         kb.append([InlineKeyboardButton(text=c["name"], callback_data=f"c:cat:{shop_id}:{c['id']}")])
     kb.append([InlineKeyboardButton(text="🔎 Поиск", callback_data=f"c:search:{kind}:{shop_id}")])
+    kb.append([InlineKeyboardButton(text="🔎 @Поиск", callback_data=f"c:at_search:{kind}:{shop_id}")])
     kb.append([
         InlineKeyboardButton(text="🏠 Домой", callback_data="c:home"),
         InlineKeyboardButton(text="🧺 Корзина", callback_data=f"c:cart:{kind}:categories:{kind}:{shop_id}"),
