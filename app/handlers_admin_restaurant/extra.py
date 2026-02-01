@@ -14,6 +14,12 @@ from app.repositories.promotions_repo import PromotionsRepo
 from app.repositories.categories_repo import CategoriesRepo
 from app.repositories.products_repo import ProductsRepo
 from app.repositories.chat_repo import ChatRepo
+from app.services.chat_ui import (
+    PAGE_SIZE,
+    build_chat_screen_kb,
+    build_chat_screen_text,
+    calc_total_pages,
+)
 from app.ui.nav import kb_nav
 
 router = Router()
@@ -261,8 +267,9 @@ def kb_chat_list(order_ids: list[int]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
 
-def kb_chat_nav(order_id: int) -> InlineKeyboardMarkup:
-    return kb_nav(home_cb="r:home", back_cb="r:chat")
+def kb_chat_nav_rows() -> list[list[InlineKeyboardButton]]:
+    nav = kb_nav(home_cb="r:home", back_cb="r:chat")
+    return [list(row) for row in nav.inline_keyboard]
 
 
 @router.callback_query(F.data == "r:chat")
@@ -286,18 +293,17 @@ async def chat_list(cq: CallbackQuery, db: Database, state: FSMContext):
     await cq.answer()
 
 
-async def render_chat(cq: CallbackQuery, db: Database, order_id: int):
+async def render_chat(cq: CallbackQuery, db: Database, order_id: int, page: int) -> None:
     chat = ChatRepo(db)
-    messages = await chat.list_messages(order_id, limit=20)
-    if not messages:
-        text = "Чат пуст. Напишите сообщение клиенту."
-    else:
-        lines = ["💬 Чат по заказу:"]
-        for msg in messages:
-            role = "Клиент" if msg["sender_role"] == "client" else "Вы"
-            lines.append(f"{role}: {msg['message_text']}")
-        text = "\n".join(lines)
-    await cq.message.edit_text(text, reply_markup=kb_chat_nav(order_id))
+    total_messages = await chat.count_messages(order_id)
+    total_pages = calc_total_pages(total_messages, PAGE_SIZE)
+    page = max(1, min(page, total_pages))
+    offset = (total_pages - page) * PAGE_SIZE
+    messages = await chat.list_messages(order_id, limit=PAGE_SIZE, offset=offset)
+
+    text = build_chat_screen_text(order_id, messages, False, "restaurant")
+    kb = build_chat_screen_kb(order_id, page, total_pages, "r", kb_chat_nav_rows())
+    await cq.message.edit_text(text, reply_markup=kb)
 
 
 @router.callback_query(F.data.startswith("r:chat:"))
@@ -314,8 +320,26 @@ async def open_chat(cq: CallbackQuery, state: FSMContext, db: Database):
         await cq.answer()
         return
     await state.set_state(RestaurantChatStates.active)
-    await state.update_data(chat_order_id=order_id)
-    await render_chat(cq, db, order_id)
+    await state.update_data(chat_order_id=order_id, chat_message_id=cq.message.message_id)
+    await render_chat(cq, db, order_id, page=10**9)
+    await cq.answer()
+
+
+@router.callback_query(F.data.startswith("r:chatp:"))
+async def paginate_chat(cq: CallbackQuery, state: FSMContext, db: Database):
+    if not await is_restaurant_admin(db, cq.from_user.id):
+        await cq.answer("Нет доступа", show_alert=True)
+        return
+    order_id = int(cq.data.split(":")[2])
+    page = int(cq.data.split(":")[3])
+    orders = OrdersRepo(db)
+    order = await orders.get_order(order_id)
+    ids = await get_admin_restaurant_ids(db, cq.from_user.id)
+    if not order or int(order["shop_id"]) not in ids:
+        await cq.answer("Чат недоступен.", show_alert=True)
+        return
+    await state.update_data(chat_order_id=order_id, chat_message_id=cq.message.message_id)
+    await render_chat(cq, db, order_id, page=page)
     await cq.answer()
 
 
@@ -342,4 +366,25 @@ async def send_chat_message(message: Message, state: FSMContext, db: Database):
         await message.bot.send_message(int(order["client_user_id"]), f"💬 Сообщение по заказу #{order_id}\n{text}")
     except Exception:
         pass
-    await message.answer("Сообщение отправлено.", reply_markup=kb_chat_nav(order_id))
+    data = await state.get_data()
+    chat_message_id = data.get("chat_message_id")
+    chat = ChatRepo(db)
+    total_messages = await chat.count_messages(order_id)
+    total_pages = calc_total_pages(total_messages, PAGE_SIZE)
+    page = total_pages
+    offset = (total_pages - page) * PAGE_SIZE
+    messages = await chat.list_messages(order_id, limit=PAGE_SIZE, offset=offset)
+    text = build_chat_screen_text(order_id, messages, False, "restaurant")
+    kb = build_chat_screen_kb(order_id, page, total_pages, "r", kb_chat_nav_rows())
+    if chat_message_id:
+        try:
+            await message.bot.edit_message_text(
+                text,
+                chat_id=message.chat.id,
+                message_id=int(chat_message_id),
+                reply_markup=kb,
+            )
+        except Exception:
+            await message.answer(text, reply_markup=kb)
+    else:
+        await message.answer(text, reply_markup=kb)

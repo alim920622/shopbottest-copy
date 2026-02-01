@@ -11,6 +11,13 @@ from app.repositories.orders_repo import OrdersRepo
 from app.repositories.shops_repo import ShopsRepo
 from app.repositories.chat_repo import ChatRepo
 from app.repositories.admins_repo import AdminsRepo
+from app.services.chat_ui import (
+    PAGE_SIZE,
+    build_chat_screen_kb,
+    build_chat_screen_text,
+    calc_total_pages,
+    remember_client_hint,
+)
 
 router = Router()
 
@@ -31,13 +38,13 @@ def kb_order_card(order_id: int, back_cb: str) -> InlineKeyboardMarkup:
     ])
 
 
-def kb_chat_nav(order_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
+def kb_chat_nav_rows(order_id: int) -> list[list[InlineKeyboardButton]]:
+    return [
         [
             InlineKeyboardButton(text="🏠 Главная", callback_data="c:home"),
             InlineKeyboardButton(text="🔙 Назад", callback_data=f"c:order:{order_id}"),
         ],
-    ])
+    ]
 
 
 @router.callback_query(F.data == "c:orders")
@@ -116,18 +123,29 @@ async def chat_list(cq: CallbackQuery, db: Database, state: FSMContext):
     await cq.answer()
 
 
-async def render_chat(cq: CallbackQuery, db: Database, order_id: int):
+async def render_chat(
+    cq: CallbackQuery,
+    db: Database,
+    order_id: int,
+    page: int,
+    show_hint: bool,
+) -> None:
+    orders = OrdersRepo(db)
+    order = await orders.get_order(order_id)
+    shop = ShopsRepo(db)
+    shop_info = await shop.get(int(order["shop_id"])) if order else None
+    business_type = shop_info["business_type"] if shop_info else "shop"
+
     chat = ChatRepo(db)
-    messages = await chat.list_messages(order_id, limit=20)
-    if not messages:
-        text = "Чат пуст. Напишите сообщение, и администратор ответит."
-    else:
-        lines = ["💬 Чат по заказу:"]
-        for msg in messages:
-            role = "Вы" if msg["sender_role"] == "client" else "Админ"
-            lines.append(f"{role}: {msg['message_text']}")
-        text = "\n".join(lines)
-    await cq.message.edit_text(text, reply_markup=kb_chat_nav(order_id))
+    total_messages = await chat.count_messages(order_id)
+    total_pages = calc_total_pages(total_messages, PAGE_SIZE)
+    page = max(1, min(page, total_pages))
+    offset = (total_pages - page) * PAGE_SIZE
+    messages = await chat.list_messages(order_id, limit=PAGE_SIZE, offset=offset)
+
+    text = build_chat_screen_text(order_id, messages, show_hint, business_type)
+    kb = build_chat_screen_kb(order_id, page, total_pages, "c", kb_chat_nav_rows(order_id))
+    await cq.message.edit_text(text, reply_markup=kb)
 
 
 @router.callback_query(F.data.startswith("c:chat:"))
@@ -142,7 +160,23 @@ async def open_chat(cq: CallbackQuery, state: FSMContext, db: Database):
 
     await state.set_state(ClientChatStates.active)
     await state.update_data(chat_order_id=order_id)
-    await render_chat(cq, db, order_id)
+    await state.update_data(chat_message_id=cq.message.message_id)
+    show_hint = remember_client_hint(cq.from_user.id, order_id)
+    await render_chat(cq, db, order_id, page=10**9, show_hint=show_hint)
+    await cq.answer()
+
+
+@router.callback_query(F.data.startswith("c:chatp:"))
+async def paginate_chat(cq: CallbackQuery, state: FSMContext, db: Database):
+    order_id = int(cq.data.split(":")[2])
+    page = int(cq.data.split(":")[3])
+    orders = OrdersRepo(db)
+    o = await orders.get_order(order_id)
+    if not o or int(o["client_user_id"]) != cq.from_user.id:
+        await cq.answer("Чат недоступен.", show_alert=True)
+        return
+    await state.update_data(chat_order_id=order_id, chat_message_id=cq.message.message_id)
+    await render_chat(cq, db, order_id, page=page, show_hint=False)
     await cq.answer()
 
 
@@ -171,5 +205,30 @@ async def send_chat_message(message: Message, state: FSMContext, db: Database):
             await message.bot.send_message(uid, f"💬 Сообщение по заказу #{order_id}\n{text}")
         except Exception:
             pass
-
-    await message.answer("Сообщение отправлено.", reply_markup=kb_chat_nav(order_id))
+    data = await state.get_data()
+    chat_message_id = data.get("chat_message_id")
+    orders = OrdersRepo(db)
+    order = await orders.get_order(order_id)
+    shop = ShopsRepo(db)
+    shop_info = await shop.get(int(order["shop_id"])) if order else None
+    business_type = shop_info["business_type"] if shop_info else "shop"
+    chat = ChatRepo(db)
+    total_messages = await chat.count_messages(order_id)
+    total_pages = calc_total_pages(total_messages, PAGE_SIZE)
+    page = total_pages
+    offset = (total_pages - page) * PAGE_SIZE
+    messages = await chat.list_messages(order_id, limit=PAGE_SIZE, offset=offset)
+    text = build_chat_screen_text(order_id, messages, False, business_type)
+    kb = build_chat_screen_kb(order_id, page, total_pages, "c", kb_chat_nav_rows(order_id))
+    if chat_message_id:
+        try:
+            await message.bot.edit_message_text(
+                text,
+                chat_id=message.chat.id,
+                message_id=int(chat_message_id),
+                reply_markup=kb,
+            )
+        except Exception:
+            await message.answer(text, reply_markup=kb)
+    else:
+        await message.answer(text, reply_markup=kb)
