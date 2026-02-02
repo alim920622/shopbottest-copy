@@ -87,7 +87,7 @@ async def inline_search(inline_query: InlineQuery, db: Database):
                 id=result_id,
                 title=title,
                 description=description,
-                input_message_content=InputTextMessageContent(message_text),
+                input_message_content=InputTextMessageContent(message_text=message_text),
                 reply_markup=_inline_actions_markup(product_id),
                 thumb_url=product.get("photo_url") or None,
             )
