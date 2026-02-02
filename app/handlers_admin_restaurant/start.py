@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 
 from app.db.database import Database
 from app.handlers_admin_restaurant.utils import is_restaurant_admin
+from app.services.screen import clear_state_keep_screen, show_main_menu
 
 router = Router()
 
@@ -21,15 +22,22 @@ def kb_admin_main() -> InlineKeyboardMarkup:
 
 
 @router.message(CommandStart())
-async def start_cmd(message: Message, db: Database):
+async def start_cmd(message: Message, db: Database, state: FSMContext):
     if not await is_restaurant_admin(db, message.from_user.id):
         await message.answer("Нет доступа. Ваш user_id не назначен админом ресторана.")
         return
-    await message.answer("Админ-меню ресторана:", reply_markup=kb_admin_main())
+    await clear_state_keep_screen(state)
+    await show_main_menu(
+        message.bot,
+        message.chat.id,
+        state,
+        "Админ-меню ресторана:",
+        kb_admin_main(),
+    )
 
 
 @router.callback_query(F.data == "r:home")
 async def home(cq: CallbackQuery, db: Database, state: FSMContext):
-    await state.clear()
+    await clear_state_keep_screen(state)
     await cq.message.edit_text("Админ-меню ресторана:", reply_markup=kb_admin_main())
     await cq.answer()

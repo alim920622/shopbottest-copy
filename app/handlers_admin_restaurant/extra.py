@@ -20,6 +20,7 @@ from app.services.chat_ui import (
     build_chat_screen_text,
     calc_total_pages,
 )
+from app.services.screen import clear_state_keep_screen, show_main_menu, set_screen_message_id
 from app.ui.nav import kb_nav
 
 router = Router()
@@ -154,8 +155,15 @@ async def promo_add_description(message: Message, state: FSMContext, db: Databas
         return
     repo = PromotionsRepo(db)
     await repo.create(ids[0], title=title, description=desc)
-    await state.clear()
-    await message.answer("Акция добавлена ✅", reply_markup=kb_admin_main())
+    await clear_state_keep_screen(state)
+    await message.answer("Акция добавлена ✅")
+    await show_main_menu(
+        message.bot,
+        message.chat.id,
+        state,
+        "Админ-меню ресторана:",
+        kb_admin_main(),
+    )
 
 
 @router.callback_query(F.data.startswith("r:promo:"))
@@ -277,7 +285,7 @@ async def chat_list(cq: CallbackQuery, db: Database, state: FSMContext):
     if not await is_restaurant_admin(db, cq.from_user.id):
         await cq.answer("Нет доступа", show_alert=True)
         return
-    await state.clear()
+    await clear_state_keep_screen(state)
     ids = await get_admin_restaurant_ids(db, cq.from_user.id)
     if not ids:
         await cq.message.edit_text("Нет доступа.", reply_markup=kb_back_home())
@@ -321,6 +329,7 @@ async def open_chat(cq: CallbackQuery, state: FSMContext, db: Database):
         return
     await state.set_state(RestaurantChatStates.active)
     await state.update_data(chat_order_id=order_id, chat_message_id=cq.message.message_id)
+    await set_screen_message_id(state, cq.message.message_id)
     await render_chat(cq, db, order_id, page=10**9)
     await cq.answer()
 
@@ -339,6 +348,7 @@ async def paginate_chat(cq: CallbackQuery, state: FSMContext, db: Database):
         await cq.answer("Чат недоступен.", show_alert=True)
         return
     await state.update_data(chat_order_id=order_id, chat_message_id=cq.message.message_id)
+    await set_screen_message_id(state, cq.message.message_id)
     await render_chat(cq, db, order_id, page=page)
     await cq.answer()
 
@@ -384,7 +394,12 @@ async def send_chat_message(message: Message, state: FSMContext, db: Database):
                 message_id=int(chat_message_id),
                 reply_markup=kb,
             )
+            await set_screen_message_id(state, int(chat_message_id))
         except Exception:
-            await message.answer(text, reply_markup=kb)
+            new_message = await message.answer(text, reply_markup=kb)
+            await state.update_data(chat_message_id=new_message.message_id)
+            await set_screen_message_id(state, new_message.message_id)
     else:
-        await message.answer(text, reply_markup=kb)
+        new_message = await message.answer(text, reply_markup=kb)
+        await state.update_data(chat_message_id=new_message.message_id)
+        await set_screen_message_id(state, new_message.message_id)

@@ -12,6 +12,7 @@ from app.repositories.products_repo import ProductsRepo
 from app.services.search_service import SearchService
 from app.services.search_utils import normalize_text
 from app.config import get_settings
+from app.services.screen import clear_state_keep_screen, show_main_menu
 
 def is_superadmin(user_id: int) -> bool:
     s = get_settings()
@@ -176,13 +177,20 @@ async def add_category_save(message: Message, state: FSMContext, db: Database):
     
     if not is_superadmin(message.from_user.id):
         await message.answer("Только супер-админ может добавлять категории.")
-        await state.clear()
+        await clear_state_keep_screen(state)
         return
 
     shop_id = await _get_shop_id_for_admin(db, message.from_user.id)
     if not shop_id:
-        await message.answer("Нет привязанного магазина.", reply_markup=kb_admin_main())
-        await state.clear()
+        await message.answer("Нет привязанного магазина.")
+        await clear_state_keep_screen(state)
+        await show_main_menu(
+            message.bot,
+            message.chat.id,
+            state,
+            "Админ-меню магазина:",
+            kb_admin_main(),
+        )
         return
 
     name = (message.text or "").strip()
@@ -197,8 +205,15 @@ async def add_category_save(message: Message, state: FSMContext, db: Database):
         )
         await conn.commit()
 
-    await state.clear()
-    await message.answer("Категория добавлена ✅", reply_markup=kb_admin_main())
+    await clear_state_keep_screen(state)
+    await message.answer("Категория добавлена ✅")
+    await show_main_menu(
+        message.bot,
+        message.chat.id,
+        state,
+        "Админ-меню магазина:",
+        kb_admin_main(),
+    )
 
 
 @router.callback_query(F.data.startswith("a:pcat:"))
@@ -255,8 +270,15 @@ async def add_product_save(message: Message, state: FSMContext, db: Database):
 
     shop_id = await _get_shop_id_for_admin(db, message.from_user.id)
     if not shop_id:
-        await message.answer("Нет привязанного магазина.", reply_markup=kb_admin_main())
-        await state.clear()
+        await message.answer("Нет привязанного магазина.")
+        await clear_state_keep_screen(state)
+        await show_main_menu(
+            message.bot,
+            message.chat.id,
+            state,
+            "Админ-меню магазина:",
+            kb_admin_main(),
+        )
         return
 
     data = await state.get_data()
@@ -277,8 +299,15 @@ async def add_product_save(message: Message, state: FSMContext, db: Database):
     repo = ProductsRepo(db)
     await repo.create(shop_id=shop_id, category_id=cat_id, name=name, price=price)
 
-    await state.clear()
-    await message.answer("Товар добавлен ✅", reply_markup=kb_admin_main())
+    await clear_state_keep_screen(state)
+    await message.answer("Товар добавлен ✅")
+    await show_main_menu(
+        message.bot,
+        message.chat.id,
+        state,
+        "Админ-меню магазина:",
+        kb_admin_main(),
+    )
 
 
 @router.callback_query(F.data.startswith("a:pprod:"))
@@ -422,7 +451,7 @@ async def bulk_import_prompt(cq: CallbackQuery, state: FSMContext, db: Database)
                 )
         except Exception:
             logger.error("Bulk import failed for admin %s", cq.from_user.id, exc_info=True)
-            await state.clear()
+            await clear_state_keep_screen(state)
             await cq.message.edit_text(
                 "Ошибка во время импорта. Проверьте файл и попробуйте снова.",
                 reply_markup=kb_admin_main(),
@@ -443,14 +472,14 @@ async def bulk_import_prompt(cq: CallbackQuery, state: FSMContext, db: Database)
             if len(errors) > 5:
                 summary_lines.append(f"... и ещё {len(errors) - 5} ошибок")
 
-        await state.clear()
+        await clear_state_keep_screen(state)
         await cq.message.edit_text("\n".join(summary_lines), reply_markup=kb_admin_main())
         await cq.answer()
         return
 
     if action == "cancel":
         logger.info("Bulk import canceled by admin %s", cq.from_user.id)
-        await state.clear()
+        await clear_state_keep_screen(state)
         await cq.message.edit_text("Импорт отменён.", reply_markup=kb_admin_main())
         await cq.answer()
         return

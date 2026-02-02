@@ -11,6 +11,7 @@ from app.repositories.orders_repo import OrdersRepo
 from app.repositories.cart_repo import CartRepo
 from app.services.search_service import SearchService
 from app.services.admin_notifications import notify_admins_new_order
+from app.services.screen import clear_state_keep_screen
 from app.handlers_client.kb import (
     kb_client_main,
     kb_order_menu,
@@ -72,13 +73,13 @@ async def list_shops(cq: CallbackQuery, db: Database, state: FSMContext):
 
 @router.callback_query(F.data == "c:home")
 async def client_home(cq: CallbackQuery, state: FSMContext):
-    await state.clear()
+    await clear_state_keep_screen(state)
     await cq.message.edit_text("Выберите раздел:", reply_markup=kb_client_main())
     await cq.answer()
 
 @router.callback_query(F.data == "c:order_menu")
 async def order_menu(cq: CallbackQuery, state: FSMContext):
-    await state.clear()
+    await clear_state_keep_screen(state)
     await cq.message.edit_text("Что будем заказывать?", reply_markup=kb_order_menu())
     await cq.answer()
 
@@ -289,7 +290,7 @@ async def back(cq: CallbackQuery, db: Database, state: FSMContext):
         await cq.answer()
         return
 
-    await state.clear()
+    await clear_state_keep_screen(state)
 
     if target == "main":
         await cq.message.edit_text("Выберите раздел:", reply_markup=kb_client_main())

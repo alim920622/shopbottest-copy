@@ -18,6 +18,7 @@ from app.services.chat_ui import (
     calc_total_pages,
     remember_client_hint,
 )
+from app.services.screen import clear_state_keep_screen, set_screen_message_id
 
 router = Router()
 
@@ -49,7 +50,7 @@ def kb_chat_nav_rows(order_id: int) -> list[list[InlineKeyboardButton]]:
 
 @router.callback_query(F.data == "c:orders")
 async def list_orders(cq: CallbackQuery, db: Database, state: FSMContext):
-    await state.clear()
+    await clear_state_keep_screen(state)
     orders = OrdersRepo(db)
     rows = await orders.list_for_client(cq.from_user.id)
     if not rows:
@@ -64,7 +65,7 @@ async def list_orders(cq: CallbackQuery, db: Database, state: FSMContext):
 
 @router.callback_query(F.data == "c:history")
 async def list_history(cq: CallbackQuery, db: Database, state: FSMContext):
-    await state.clear()
+    await clear_state_keep_screen(state)
     orders = OrdersRepo(db)
     rows = await orders.list_for_client(cq.from_user.id, statuses=DONE_STATUSES)
     if not rows:
@@ -79,7 +80,7 @@ async def list_history(cq: CallbackQuery, db: Database, state: FSMContext):
 
 @router.callback_query(F.data.startswith("c:order:"))
 async def order_card(cq: CallbackQuery, db: Database, state: FSMContext):
-    await state.clear()
+    await clear_state_keep_screen(state)
     order_id = int(cq.data.split(":")[2])
     orders = OrdersRepo(db)
     o = await orders.get_order(order_id)
@@ -111,7 +112,7 @@ async def order_card(cq: CallbackQuery, db: Database, state: FSMContext):
 
 @router.callback_query(F.data == "c:chat")
 async def chat_list(cq: CallbackQuery, db: Database, state: FSMContext):
-    await state.clear()
+    await clear_state_keep_screen(state)
     chats = ChatRepo(db)
     order_ids = await chats.list_order_ids_with_chat(user_id=cq.from_user.id)
     if not order_ids:
@@ -161,6 +162,7 @@ async def open_chat(cq: CallbackQuery, state: FSMContext, db: Database):
     await state.set_state(ClientChatStates.active)
     await state.update_data(chat_order_id=order_id)
     await state.update_data(chat_message_id=cq.message.message_id)
+    await set_screen_message_id(state, cq.message.message_id)
     show_hint = remember_client_hint(cq.from_user.id, order_id)
     await render_chat(cq, db, order_id, page=10**9, show_hint=show_hint)
     await cq.answer()
@@ -176,6 +178,7 @@ async def paginate_chat(cq: CallbackQuery, state: FSMContext, db: Database):
         await cq.answer("Чат недоступен.", show_alert=True)
         return
     await state.update_data(chat_order_id=order_id, chat_message_id=cq.message.message_id)
+    await set_screen_message_id(state, cq.message.message_id)
     await render_chat(cq, db, order_id, page=page, show_hint=False)
     await cq.answer()
 
@@ -228,7 +231,12 @@ async def send_chat_message(message: Message, state: FSMContext, db: Database):
                 message_id=int(chat_message_id),
                 reply_markup=kb,
             )
+            await set_screen_message_id(state, int(chat_message_id))
         except Exception:
-            await message.answer(text, reply_markup=kb)
+            new_message = await message.answer(text, reply_markup=kb)
+            await state.update_data(chat_message_id=new_message.message_id)
+            await set_screen_message_id(state, new_message.message_id)
     else:
-        await message.answer(text, reply_markup=kb)
+        new_message = await message.answer(text, reply_markup=kb)
+        await state.update_data(chat_message_id=new_message.message_id)
+        await set_screen_message_id(state, new_message.message_id)

@@ -8,6 +8,7 @@ from aiogram.fsm.state import StatesGroup, State
 from app.db.database import Database
 from app.handlers_client.kb import kb_client_main
 from app.repositories.client_profiles_repo import ClientProfilesRepo
+from app.services.screen import clear_state_keep_screen, show_main_menu
 
 router = Router()
 
@@ -74,8 +75,9 @@ async def save_full_name(message: Message, state: FSMContext, db: Database):
         return
     repo = ClientProfilesRepo(db)
     await repo.upsert(message.from_user.id, full_name=name)
-    await state.clear()
-    await message.answer("ФИО сохранено.", reply_markup=kb_client_main())
+    await clear_state_keep_screen(state)
+    await message.answer("ФИО сохранено.")
+    await show_main_menu(message.bot, message.chat.id, state, "Выберите раздел:", kb_client_main())
 
 
 @router.message(CabinetStates.edit_phone)
@@ -86,8 +88,9 @@ async def save_phone(message: Message, state: FSMContext, db: Database):
         return
     repo = ClientProfilesRepo(db)
     await repo.upsert(message.from_user.id, phone=phone)
-    await state.clear()
-    await message.answer("Телефон сохранён.", reply_markup=kb_client_main())
+    await clear_state_keep_screen(state)
+    await message.answer("Телефон сохранён.")
+    await show_main_menu(message.bot, message.chat.id, state, "Выберите раздел:", kb_client_main())
 
 
 @router.message(CabinetStates.edit_address)
@@ -98,5 +101,6 @@ async def save_address(message: Message, state: FSMContext, db: Database):
         return
     repo = ClientProfilesRepo(db)
     await repo.upsert(message.from_user.id, address=address)
-    await state.clear()
-    await message.answer("Адрес сохранён.", reply_markup=kb_client_main())
+    await clear_state_keep_screen(state)
+    await message.answer("Адрес сохранён.")
+    await show_main_menu(message.bot, message.chat.id, state, "Выберите раздел:", kb_client_main())

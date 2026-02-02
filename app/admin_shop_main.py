@@ -10,6 +10,7 @@ from app.handlers_admin_shop.orders import router as orders_router
 from app.handlers_admin_shop.extra import router as extra_router
 from app.handlers_admin_shop.products import router as products_router
 from app.handlers_admin_shop.chat import router as chat_router
+from app.handlers_admin_shop.fallback import router as fallback_router
 
 
 async def main():
@@ -31,6 +32,7 @@ async def main():
     dp.include_router(extra_router)
     dp.include_router(orders_router)
     dp.include_router(chat_router)
+    dp.include_router(fallback_router)
 
     await dp.start_polling(bot)
 

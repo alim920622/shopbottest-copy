@@ -4,6 +4,7 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from app.states import MenuStates
 from app.keyboards import kb_main
+from app.services.screen import clear_state_keep_screen, show_main_menu
 
 router = Router()
 
@@ -13,5 +14,6 @@ async def start_cmd(message: Message, state: FSMContext, auth_role: str):
         await message.answer("Доступ запрещён. Ваш user_id не добавлен в список администраторов.")
         return
 
+    await clear_state_keep_screen(state)
     await state.set_state(MenuStates.main)
-    await message.answer("Главное меню:", reply_markup=kb_main())
+    await show_main_menu(message.bot, message.chat.id, state, "Главное меню:", kb_main())

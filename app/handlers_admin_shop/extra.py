@@ -12,6 +12,7 @@ from app.repositories.shops_repo import ShopsRepo
 from app.repositories.promotions_repo import PromotionsRepo
 from app.repositories.categories_repo import CategoriesRepo
 from app.repositories.products_repo import ProductsRepo
+from app.services.screen import clear_state_keep_screen, show_main_menu
 
 router = Router()
 
@@ -152,8 +153,15 @@ async def promo_add_description(message: Message, state: FSMContext, db: Databas
         return
     repo = PromotionsRepo(db)
     await repo.create(shop_ids[0], title=title, description=desc)
-    await state.clear()
-    await message.answer("Акция добавлена ✅", reply_markup=kb_admin_main())
+    await clear_state_keep_screen(state)
+    await message.answer("Акция добавлена ✅")
+    await show_main_menu(
+        message.bot,
+        message.chat.id,
+        state,
+        "Админ-меню магазина:",
+        kb_admin_main(),
+    )
 
 
 @router.callback_query(F.data.startswith("a:promo:"))

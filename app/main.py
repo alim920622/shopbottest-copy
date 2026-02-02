@@ -6,7 +6,7 @@ from app.config import get_settings
 from app.db import Database
 from app.middlewares import AuthMiddleware
 
-from app.handlers import start, menu
+from app.handlers import start, menu, fallback
 
 async def main():
     settings = get_settings()
@@ -21,9 +21,9 @@ async def main():
 
     dp.include_router(start.router)
     dp.include_router(menu.router)
+    dp.include_router(fallback.router)
 
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
-

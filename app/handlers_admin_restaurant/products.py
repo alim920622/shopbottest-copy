@@ -11,6 +11,7 @@ from app.handlers_admin_restaurant.utils import get_admin_restaurant_ids
 from app.repositories.categories_repo import CategoriesRepo
 from app.repositories.products_repo import ProductsRepo
 from app.services.search_utils import normalize_text, build_keywords
+from app.services.screen import clear_state_keep_screen
 
 router = Router()
 class ProductFSM(StatesGroup):
@@ -242,7 +243,7 @@ async def add_product_desc(message: Message, state: FSMContext, db: Database):
         await conn.commit()
 
     # ВАЖНО: очищаем FSM, чтобы не спрашивало описание снова
-    await state.clear()
+    await clear_state_keep_screen(state)
 
     # Чтобы кнопки были ВНИЗУ, делаем новый список сообщением (а не edit старого)
     prod = ProductsRepo(db)
@@ -338,7 +339,7 @@ async def edit_name_apply(message: Message, state: FSMContext, db: Database):
     prod = ProductsRepo(db)
     await prod.update(product_id, name=name)
 
-    await state.clear()
+    await clear_state_keep_screen(state)
 
     await render_product_card_edit(
         message.bot,
@@ -377,7 +378,7 @@ async def edit_price_apply(message: Message, state: FSMContext, db: Database):
     prod = ProductsRepo(db)
     await prod.update(product_id, price=price)
 
-    await state.clear()
+    await clear_state_keep_screen(state)
 
     await render_product_card_edit(
         message.bot,
@@ -413,7 +414,7 @@ async def edit_desc_apply(message: Message, state: FSMContext, db: Database):
     prod = ProductsRepo(db)
     await prod.update(product_id, description=desc)
 
-    await state.clear()
+    await clear_state_keep_screen(state)
 
     await render_product_card_edit(
         message.bot,
@@ -503,7 +504,7 @@ async def open_product(cq: CallbackQuery, db: Database):
 @router.callback_query(F.data == "r:cancel")
 async def cancel_fsm(cq: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    await state.clear()
+    await clear_state_keep_screen(state)
 
     # если знаем, откуда пришли — возвращаем в список позиций категории
     restaurant_id = data.get("restaurant_id")
