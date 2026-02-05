@@ -10,10 +10,16 @@ router = Router()
 
 @router.message(F.text)
 async def fallback_handler(message: Message, state: FSMContext):
+    # ✅ Сообщения, отправленные "via bot" (inline-результаты @username),
+    # не должны вызывать fallback, иначе бот спамит "Я не понял команду".
+    if message.via_bot is not None:
+        return
+
     if await state.get_state() is not None:
         return
     if message.text and message.text.startswith("/"):
         return
+
     await delete_screen(message.bot, message.chat.id, state)
     await message.answer("Я не понял команду. Используйте меню ниже.")
     await show_main_menu(
