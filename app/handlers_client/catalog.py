@@ -36,6 +36,8 @@ from app.handlers_client.kb import (
 router = Router()
 logger = logging.getLogger(__name__)
 
+SKU_RE = re.compile(r"^SKU-[0-9A-F]{8}$")
+
 
 class ClientCatalogStates(StatesGroup):
     search = State()
@@ -77,11 +79,9 @@ def _parse_cart_back_target(parts: list[str]) -> dict | None:
     return None
 
 
-@router.message(F.text)
+@router.message(F.via_bot.is_not(None), F.text.regexp(SKU_RE))
 async def open_product_from_inline_sku(message: Message, db: Database, state: FSMContext):
-    # Обрабатываем только inline-триггеры вида "SKU-...".
-    if message.via_bot is None:
-        return
+
 
     sku = _parse_sku_from_message(message.text)
     if not sku:
