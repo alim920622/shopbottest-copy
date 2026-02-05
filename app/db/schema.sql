@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS products (
     keywords_norm TEXT DEFAULT '',
     unit TEXT DEFAULT 'шт',
     barcode TEXT DEFAULT '',
+    sku TEXT,
     is_active INTEGER DEFAULT 1,
     updated_at DATETIME,
     FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
@@ -131,6 +132,7 @@ CREATE INDEX IF NOT EXISTS idx_products_shop ON products(shop_id);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_name_norm ON products(name_norm);
 CREATE INDEX IF NOT EXISTS idx_products_keywords_norm ON products(keywords_norm);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_products_sku ON products(sku);
 CREATE INDEX IF NOT EXISTS idx_orders_shop_status ON orders(shop_id, status);
 CREATE INDEX IF NOT EXISTS idx_orders_client ON orders(client_user_id);
 CREATE INDEX IF NOT EXISTS idx_shop_admins_user ON shop_admins(user_id);

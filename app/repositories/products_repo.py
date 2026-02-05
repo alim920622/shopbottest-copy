@@ -1,5 +1,9 @@
 from __future__ import annotations
+
+import secrets
+from sqlite3 import IntegrityError
 from typing import Optional, Sequence
+
 from app.db.database import Database
 from app.services.search_utils import normalize_text, build_keywords
 
@@ -8,18 +12,64 @@ class ProductsRepo:
     def __init__(self, db: Database):
         self.db = db
 
-    async def create(self, shop_id: int, category_id: int, name: str, price: float,
-                     description: str | None = None, photo_url: str | None = None) -> int:
+    @staticmethod
+    def _generate_sku() -> str:
+        # Публичный SKU в формате SKU-XXXXXXXX (8 hex uppercase).
+        return f"SKU-{secrets.token_hex(4).upper()}"
+
+    async def _get_business_type(self, conn, shop_id: int) -> str | None:
+        cur = await conn.execute("SELECT business_type FROM shops WHERE id=?", (shop_id,))
+        row = await cur.fetchone()
+        return row["business_type"] if row else None
+
+    async def _reserve_sku(self, conn, shop_id: int, product_id: int, sku: str | None = None, attempts: int = 25) -> None:
+        # Для ресторанов SKU не назначаем.
+        business_type = await self._get_business_type(conn, shop_id)
+        if business_type != "shop":
+            return
+
+        # Генерируем SKU с повторами при конфликте уникальности.
+        for _ in range(attempts):
+            candidate = (sku or self._generate_sku()).strip().upper()
+            if not candidate:
+                candidate = self._generate_sku()
+            try:
+                await conn.execute(
+                    "UPDATE products SET sku=? WHERE id=? AND (sku IS NULL OR sku='')",
+                    (candidate, product_id),
+                )
+                return
+            except IntegrityError:
+                if sku:
+                    raise
+                continue
+        raise RuntimeError("Не удалось назначить уникальный SKU")
+
+    async def create(
+        self,
+        shop_id: int,
+        category_id: int,
+        name: str,
+        price: float,
+        description: str | None = None,
+        photo_url: str | None = None,
+        sku: str | None = None,
+    ) -> int:
         name_norm = normalize_text(name)
         keywords_norm = build_keywords(name, description or "")
+        prepared_sku = (sku or "").strip().upper() or None
+
         async with self.db.conn() as conn:
             cur = await conn.execute(
-                """INSERT INTO products (shop_id, category_id, name, description, price, photo_url, name_norm, keywords_norm)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (shop_id, category_id, name, description, price, photo_url, name_norm, keywords_norm),
+                """INSERT INTO products (shop_id, category_id, name, description, price, photo_url, name_norm, keywords_norm, sku)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (shop_id, category_id, name, description, price, photo_url, name_norm, keywords_norm, prepared_sku),
             )
+            product_id = int(cur.lastrowid)
+            if prepared_sku is None:
+                await self._reserve_sku(conn, shop_id=shop_id, product_id=product_id)
             await conn.commit()
-            return int(cur.lastrowid)
+            return product_id
 
     async def update(self, product_id: int, name: str | None = None, description: str | None = None,
                      price: float | None = None, is_active: bool | None = None) -> None:
@@ -80,7 +130,47 @@ class ProductsRepo:
             cur = await conn.execute("SELECT * FROM products WHERE id=?", (product_id,))
             row = await cur.fetchone()
             return dict(row) if row else None
-    
+
+    async def get_by_sku(self, shop_id: int, sku: str) -> Optional[dict]:
+        async with self.db.conn() as conn:
+            cur = await conn.execute(
+                "SELECT * FROM products WHERE shop_id=? AND sku=?",
+                (shop_id, (sku or "").strip().upper()),
+            )
+            row = await cur.fetchone()
+            return dict(row) if row else None
+
+    async def find_by_natural_key(self, shop_id: int, category_id: int, name_norm: str) -> Optional[dict]:
+        async with self.db.conn() as conn:
+            cur = await conn.execute(
+                "SELECT * FROM products WHERE shop_id=? AND category_id=? AND name_norm=? LIMIT 1",
+                (shop_id, category_id, name_norm),
+            )
+            row = await cur.fetchone()
+            return dict(row) if row else None
+
+    async def set_sku_if_missing(self, product_id: int, sku: str) -> None:
+        async with self.db.conn() as conn:
+            await conn.execute(
+                "UPDATE products SET sku=? WHERE id=? AND (sku IS NULL OR sku='')",
+                ((sku or "").strip().upper(), product_id),
+            )
+            await conn.commit()
+
+    async def ensure_sku(self, product_id: int, attempts: int = 25) -> Optional[str]:
+        async with self.db.conn() as conn:
+            cur = await conn.execute("SELECT id, shop_id, sku FROM products WHERE id=?", (product_id,))
+            row = await cur.fetchone()
+            if not row:
+                return None
+            if row["sku"]:
+                return str(row["sku"])
+            await self._reserve_sku(conn, shop_id=int(row["shop_id"]), product_id=product_id, attempts=attempts)
+            cur = await conn.execute("SELECT sku FROM products WHERE id=?", (product_id,))
+            updated = await cur.fetchone()
+            await conn.commit()
+            return str(updated["sku"]) if updated and updated["sku"] else None
+
     async def list_by_category_any(self, shop_id: int, category_id: int) -> Sequence[dict]:
         """Список товаров категории, включая неактивные (для админки)."""
         q = "SELECT * FROM products WHERE shop_id=? AND category_id=? ORDER BY id DESC"

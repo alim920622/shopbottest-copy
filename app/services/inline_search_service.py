@@ -21,7 +21,8 @@ class InlineSearchService:
 
     async def search_products(self, query: str, limit: int = 20) -> Sequence[InlineSearchItem]:
         shops_repo = ShopsRepo(self.db)
-        shops = await shops_repo.list_active()
+        # Inline-поиск доступен только по магазинам.
+        shops = await shops_repo.list_active(business_type="shop")
         if not shops:
             return []
 

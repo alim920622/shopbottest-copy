@@ -12,6 +12,7 @@ class ParsedProduct:
     name: str
     price: float
     description: str = ""
+    sku: str = ""
 
 
 @dataclass(frozen=True)
@@ -55,7 +56,17 @@ def parse_products_csv(data: bytes, encoding: str = "utf-8") -> ImportPreview:
             continue
         name = row[0].strip()
         price = _parse_price(row[1])
-        description = row[2].strip() if len(row) > 2 else ""
+        description = ""
+        sku = ""
+        if len(row) > 3:
+            description = row[2].strip()
+            sku = row[3].strip()
+        elif len(row) > 2:
+            third = row[2].strip()
+            if third.upper().startswith("SKU-"):
+                sku = third
+            else:
+                description = third
 
         if not name:
             errors.append(f"Строка {idx}: пустое название.")
@@ -70,6 +81,6 @@ def parse_products_csv(data: bytes, encoding: str = "utf-8") -> ImportPreview:
             continue
         seen.add(norm)
 
-        items.append(ParsedProduct(name=name, price=price, description=description))
+        items.append(ParsedProduct(name=name, price=price, description=description, sku=sku))
 
     return ImportPreview(items=items, errors=errors)

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import aiosqlite
+import secrets
+from sqlite3 import IntegrityError
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -11,6 +13,27 @@ from contextlib import asynccontextmanager
 class DBConfig:
     path: str  # sqlite file path, e.g. "shop.db"
 
+
+
+
+async def _generate_sku() -> str:
+    # Генерация публичного SKU в формате SKU-XXXXXXXX.
+    return f"SKU-{secrets.token_hex(4).upper()}"
+
+
+async def _assign_sku_for_product(connection: aiosqlite.Connection, product_id: int, attempts: int = 25) -> None:
+    # Пытаемся назначить уникальный SKU, повторяя генерацию при конфликте.
+    for _ in range(attempts):
+        candidate = await _generate_sku()
+        try:
+            await connection.execute(
+                "UPDATE products SET sku=? WHERE id=? AND (sku IS NULL OR sku='')",
+                (candidate, product_id),
+            )
+            return
+        except IntegrityError:
+            continue
+    raise RuntimeError("Не удалось назначить SKU при миграции")
 
 class Database:
     """
@@ -60,6 +83,7 @@ class Database:
         await add_column("products", "unit", "unit TEXT DEFAULT 'шт'")
         await add_column("products", "barcode", "barcode TEXT DEFAULT ''")
         await add_column("products", "updated_at", "updated_at DATETIME")
+        await add_column("products", "sku", "sku TEXT")
 
         await connection.execute(
             """
@@ -121,7 +145,22 @@ class Database:
         )
 
         await connection.execute("CREATE INDEX IF NOT EXISTS idx_products_name_norm ON products(name_norm);")
+        await connection.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_products_sku ON products(sku);")
         await connection.execute("CREATE INDEX IF NOT EXISTS idx_products_keywords_norm ON products(keywords_norm);")
+
+
+        cur = await connection.execute(
+            """
+            SELECT p.id
+            FROM products p
+            JOIN shops s ON s.id = p.shop_id
+            WHERE s.business_type='shop' AND (p.sku IS NULL OR p.sku='')
+            """
+        )
+        rows = await cur.fetchall()
+        for row in rows:
+            await _assign_sku_for_product(connection, int(row["id"]))
+
         await connection.execute("CREATE INDEX IF NOT EXISTS idx_search_synonyms_term ON search_synonyms(term);")
         await connection.execute("CREATE INDEX IF NOT EXISTS idx_promotions_shop ON promotions(shop_id);")
         await connection.execute("CREATE INDEX IF NOT EXISTS idx_promo_items_promo ON promotion_items(promo_id);")

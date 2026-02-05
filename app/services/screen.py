@@ -82,3 +82,23 @@ async def show_main_menu(
         text=text,
         reply_markup=reply_markup,
     )
+
+
+async def safe_edit_text(cq, text: str, reply_markup: InlineKeyboardMarkup | None = None) -> None:
+    # Безопасное обновление обычного или inline-сообщения.
+    try:
+        if cq.message is not None:
+            await cq.message.edit_text(text, reply_markup=reply_markup)
+            return
+        if cq.inline_message_id:
+            await cq.bot.edit_message_text(
+                text=text,
+                inline_message_id=cq.inline_message_id,
+                reply_markup=reply_markup,
+            )
+            return
+        await cq.answer("Не удалось обновить сообщение")
+    except TelegramBadRequest as exc:
+        if "message is not modified" in str(exc):
+            return
+        raise

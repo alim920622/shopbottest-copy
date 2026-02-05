@@ -9,6 +9,7 @@ from app.db.database import Database
 from app.handlers_admin_shop.utils import get_admin_shop_ids, is_shop_admin
 from app.handlers_admin_shop.start import kb_admin_main
 from app.repositories.products_repo import ProductsRepo
+from app.repositories.shops_repo import ShopsRepo
 from app.services.search_service import SearchService
 from app.services.search_utils import normalize_text
 from app.config import get_settings
@@ -102,9 +103,10 @@ def kb_bulk_confirm() -> InlineKeyboardMarkup:
 def bulk_format_hint() -> str:
     return (
         "Ожидаемый формат:\n"
-        "Название; Цена; Описание (опционально)\n"
+        "Название; Цена; Описание (опционально); SKU (опционально)\n"
+        "или: Название; Цена; SKU\n"
         "Пример:\n"
-        "Банан; 12.5; Спелый банан"
+        "Банан; 12.5; Спелый банан; SKU-1A2B3C4D"
     )
 
 
@@ -433,6 +435,12 @@ async def bulk_import_prompt(cq: CallbackQuery, state: FSMContext, db: Database)
             await cq.answer()
             return
 
+        shop = await ShopsRepo(db).get(shop_id)
+        if not shop or shop.get("business_type") != "shop":
+            await cq.message.edit_text("Массовая загрузка доступна только для магазинов.", reply_markup=kb_home())
+            await cq.answer()
+            return
+
         await state.update_data(bulk_import_started=True)
         try:
             await cq.message.edit_reply_markup(reply_markup=None)
@@ -442,13 +450,51 @@ async def bulk_import_prompt(cq: CallbackQuery, state: FSMContext, db: Database)
         try:
             repo = ProductsRepo(db)
             for it in items:
-                await repo.create(
+                sku = (it.get("sku") or "").strip().upper()
+                if sku:
+                    existing_by_sku = await repo.get_by_sku(shop_id=shop_id, sku=sku)
+                    if existing_by_sku:
+                        await repo.update(
+                            product_id=int(existing_by_sku["id"]),
+                            name=it["name"],
+                            description=it.get("description") or "",
+                            price=float(it["price"]),
+                        )
+                    else:
+                        await repo.create(
+                            shop_id=shop_id,
+                            category_id=cat_id,
+                            name=it["name"],
+                            price=float(it["price"]),
+                            description=it.get("description") or "",
+                            sku=sku,
+                        )
+                    continue
+
+                name_norm = normalize_text(it["name"])
+                existing_by_name = await repo.find_by_natural_key(
                     shop_id=shop_id,
                     category_id=cat_id,
-                    name=it["name"],
-                    price=float(it["price"]),
-                    description=it.get("description") or "",
+                    name_norm=name_norm,
                 )
+                if existing_by_name:
+                    product_id = int(existing_by_name["id"])
+                    await repo.update(
+                        product_id=product_id,
+                        name=it["name"],
+                        description=it.get("description") or "",
+                        price=float(it["price"]),
+                    )
+                    await repo.ensure_sku(product_id)
+                else:
+                    await repo.create(
+                        shop_id=shop_id,
+                        category_id=cat_id,
+                        name=it["name"],
+                        price=float(it["price"]),
+                        description=it.get("description") or "",
+                        sku=None,
+                    )
         except Exception:
             logger.error("Bulk import failed for admin %s", cq.from_user.id, exc_info=True)
             await clear_state_keep_screen(state)
@@ -494,7 +540,7 @@ async def bulk_import_prompt(cq: CallbackQuery, state: FSMContext, db: Database)
         await state.update_data(category_id=cat_id, bulk_import_started=False)
         await cq.message.edit_text(
             "Загрузите CSV файл с товарами.\n"
-            "Формат строк: Название; Цена; Описание (опционально).",
+            "Формат строк: Название; Цена; Описание (опционально); SKU (опционально).",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [
                     InlineKeyboardButton(text="🏠 Главная", callback_data="a:home"),
@@ -529,6 +575,12 @@ async def bulk_import_file(message: Message, state: FSMContext, db: Database):
     data = await message.bot.download_file(file.file_path)
     content = data.read()
 
+    shop_id = await _get_shop_id_for_admin(db, message.from_user.id)
+    shop = await ShopsRepo(db).get(shop_id) if shop_id else None
+    if not shop or shop.get("business_type") != "shop":
+        await message.answer("Массовая загрузка доступна только для магазинов.")
+        return
+
     preview = parse_products_csv(content)
     errors = preview.errors
 
@@ -538,13 +590,13 @@ async def bulk_import_file(message: Message, state: FSMContext, db: Database):
     if cat_id:
         async with db.conn() as conn:
             cur = await conn.execute(
-                "SELECT name_norm FROM products WHERE category_id=?",
-                (cat_id,),
+                "SELECT name_norm FROM products WHERE shop_id=? AND category_id=?",
+                (shop_id, cat_id),
             )
             existing = {str(r["name_norm"] or "") for r in await cur.fetchall()}
         filtered_items = []
         for item in items:
-            if item.name and normalize_text(item.name) in existing:
+            if not (item.sku or "").strip() and item.name and normalize_text(item.name) in existing:
                 errors.append(f"Дубликат в базе: {item.name}")
                 continue
             filtered_items.append(item)
@@ -567,7 +619,7 @@ async def bulk_import_file(message: Message, state: FSMContext, db: Database):
         return
 
     await state.update_data(
-        bulk_items=[{"name": i.name, "price": i.price, "description": i.description} for i in items],
+        bulk_items=[{"name": i.name, "price": i.price, "description": i.description, "sku": i.sku} for i in items],
         bulk_errors=errors,
         bulk_import_started=False,
     )

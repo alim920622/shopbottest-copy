@@ -11,7 +11,7 @@ from app.repositories.orders_repo import OrdersRepo
 from app.repositories.cart_repo import CartRepo
 from app.services.search_service import SearchService
 from app.services.admin_notifications import notify_admins_new_order
-from app.services.screen import clear_state_keep_screen
+from app.services.screen import clear_state_keep_screen, safe_edit_text
 from app.handlers_client.kb import (
     kb_client_main,
     kb_order_menu,
@@ -20,7 +20,9 @@ from app.handlers_client.kb import (
     kb_shops_list,
     kb_categories_list,
     kb_products_list,
+    kb_products_list_shop,
     kb_product_card,
+    kb_product_card_shop,
     kb_cart,
     kb_cart_empty,
     kb_checkout_choose_shop,
@@ -163,9 +165,13 @@ async def show_category_products(
         return
 
     await state.update_data(last_view={"name": "products", "shop_id": shop_id, "category_id": category_id})
+    data = await state.get_data()
+    kind = data.get("last_kind") or "shop"
+    products_kb = kb_products_list_shop(products, shop_id, category_id) if kind == "shop" else kb_products_list(products, shop_id, category_id)
+
     await message.edit_text(
         "Список товаров:",
-        reply_markup=kb_products_list(products, shop_id, category_id)
+        reply_markup=products_kb
     )
 
 
@@ -191,6 +197,60 @@ async def open_product(cq: CallbackQuery, db: Database):
     )
     await cq.answer()
 
+
+
+
+@router.callback_query(F.data.startswith("c:prodsku:"))
+async def open_product_by_sku(cq: CallbackQuery, db: Database):
+    # c:prodsku:{shop_id}:{sku}
+    _, _, shop_id_str, sku = cq.data.split(":", 3)
+    shop_id = int(shop_id_str)
+
+    shop = await ShopsRepo(db).get(shop_id)
+    if not shop or shop.get("business_type") != "shop":
+        await safe_edit_text(cq, "Товар не найден.", reply_markup=kb_back("order_menu"))
+        await cq.answer()
+        return
+
+    prod = ProductsRepo(db)
+    p = await prod.get_by_sku(shop_id=shop_id, sku=sku)
+    if not p:
+        await safe_edit_text(cq, "Товар не найден.", reply_markup=kb_back("order_menu"))
+        await cq.answer()
+        return
+
+    text = f"{p['name']}\n\nЦена: {p['price']}\n"
+    if p.get("description"):
+        text += f"\nОписание: {p['description']}\n"
+
+    await safe_edit_text(
+        cq,
+        text,
+        reply_markup=kb_product_card_shop(shop_id=shop_id, category_id=p["category_id"], sku=sku),
+    )
+    await cq.answer()
+
+
+@router.callback_query(F.data.startswith("c:addsku:"))
+async def add_to_cart_by_sku(cq: CallbackQuery, db: Database):
+    # c:addsku:{shop_id}:{sku}
+    _, _, shop_id_str, sku = cq.data.split(":", 3)
+    shop_id = int(shop_id_str)
+
+    shop = await ShopsRepo(db).get(shop_id)
+    if not shop or shop.get("business_type") != "shop":
+        await cq.answer("Товар не найден", show_alert=True)
+        return
+
+    prod = ProductsRepo(db)
+    p = await prod.get_by_sku(shop_id=shop_id, sku=sku)
+    if not p:
+        await cq.answer("Товар не найден", show_alert=True)
+        return
+
+    cart = CartRepo(db)
+    await cart.add(user_id=cq.from_user.id, product_id=int(p["id"]), qty=1)
+    await cq.answer("Добавлено в корзину")
 
 @router.callback_query(F.data.startswith("c:add:"))
 async def add_to_cart(cq: CallbackQuery, db: Database):
@@ -418,6 +478,14 @@ async def search_prompt(cq: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("c:at_search:"))
 async def inline_search_prompt(cq: CallbackQuery):
     _, _, kind, shop_id_str = cq.data.split(":", 3)
+    if kind != "shop":
+        await cq.message.edit_text(
+            "Inline-поиск доступен только для магазинов.",
+            reply_markup=kb_back(f"categories:{kind}:{shop_id_str}"),
+        )
+        await cq.answer()
+        return
+
     me = await cq.bot.get_me()
     username = me.username or "ваш_бот"
     text = (
@@ -450,9 +518,14 @@ async def search_input(message: Message, state: FSMContext, db: Database):
         return
 
     products = [r.product for r in results]
+    reply_markup = (
+        kb_products_list_shop(products, shop_id, products[0]["category_id"])
+        if kind == "shop"
+        else kb_products_list(products, shop_id, products[0]["category_id"])
+    )
     await message.answer(
         "Найденные товары:",
-        reply_markup=kb_products_list(products, shop_id, products[0]["category_id"]),
+        reply_markup=reply_markup,
     )
 
 

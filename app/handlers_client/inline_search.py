@@ -35,11 +35,11 @@ def _format_price(value: object) -> str:
     return f"{number:.2f}"
 
 
-def _inline_actions_markup(product_id: int) -> InlineKeyboardMarkup:
+def _inline_actions_markup(shop_id: int, sku: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="➕ В корзину", callback_data=f"c:add:{product_id}"),
-            InlineKeyboardButton(text="📦 Открыть товар", callback_data=f"c:prod:{product_id}"),
+            InlineKeyboardButton(text="➕ В корзину", callback_data=f"c:addsku:{shop_id}:{sku}"),
+            InlineKeyboardButton(text="📦 Открыть товар", callback_data=f"c:prodsku:{shop_id}:{sku}"),
         ]
     ])
 
@@ -60,12 +60,18 @@ async def inline_search(inline_query: InlineQuery, db: Database):
         shop = item.shop
         price = product.get("price")
         price_text = _format_price(price) if price is not None else ""
+        shop_id = int(shop.get("id"))
+        sku = (product.get("sku") or "").strip().upper()
+        if not sku:
+            continue
 
         description_parts = []
         if price_text:
             description_parts.append(f"Цена: {price_text}")
         if shop.get("name"):
             description_parts.append(shop["name"])
+        if sku:
+            description_parts.append(sku)
 
         message_lines = [f"🛒 {product.get('name', '')}".strip()]
         if price_text:
@@ -75,9 +81,7 @@ async def inline_search(inline_query: InlineQuery, db: Database):
         if shop.get("name"):
             message_lines.append(f"\n🏪 {shop['name']}")
 
-        product_id = int(product.get("id"))
-        shop_id = int(shop.get("id"))
-        result_id = f"p:{product_id}:s:{shop_id}"
+        result_id = f"shop:{shop_id}:sku:{sku}"
         message_text = _clamp_text("\n".join(message_lines).strip(), 4000)
         title = _clamp_text(product.get("name", "Товар"), 80)
         description = " • ".join(description_parts) if description_parts else ""
@@ -88,7 +92,7 @@ async def inline_search(inline_query: InlineQuery, db: Database):
                 title=title,
                 description=description,
                 input_message_content=InputTextMessageContent(message_text=message_text),
-                reply_markup=_inline_actions_markup(product_id),
+                reply_markup=_inline_actions_markup(shop_id, sku),
                 thumb_url=product.get("photo_url") or None,
             )
         )

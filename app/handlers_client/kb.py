@@ -89,6 +89,47 @@ def kb_products_list(products: list[dict], shop_id: int, category_id: int) -> In
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
 
+
+
+def kb_products_list_shop(products: list[dict], shop_id: int, category_id: int) -> InlineKeyboardMarkup:
+    """
+    callback: c:prodsku:{shop_id}:{sku}
+    """
+    kb = []
+    for p in products:
+        sku = (p.get("sku") or "").strip().upper()
+        if not sku:
+            continue
+        price = p["price"]
+        kb.append([InlineKeyboardButton(
+            text=f"{p['name']} — {price}",
+            callback_data=f"c:prodsku:{shop_id}:{sku}"
+        )])
+    kb.append([
+        InlineKeyboardButton(text="🏠 Домой", callback_data="c:home"),
+        InlineKeyboardButton(
+            text="🧺 Корзина",
+            callback_data=f"c:cart:auto:products:{shop_id}:{category_id}",
+        ),
+        InlineKeyboardButton(text="🔙 Назад", callback_data=f"c:pickback:{shop_id}"),
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=kb)
+
+
+def kb_product_card_shop(shop_id: int, category_id: int, sku: str) -> InlineKeyboardMarkup:
+    """
+    callback:
+      c:addsku:{shop_id}:{sku} — добавить в корзину
+      c:cat:{shop_id}:{category_id} — назад в товары категории
+    """
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ Добавить в корзину", callback_data=f"c:addsku:{shop_id}:{sku}")],
+        [
+            InlineKeyboardButton(text="🏠 Главная", callback_data="c:home"),
+            InlineKeyboardButton(text="🔙 Назад", callback_data=f"c:cat:{shop_id}:{category_id}"),
+        ],
+    ])
+
 def kb_product_card(product_id: int, shop_id: int, category_id: int) -> InlineKeyboardMarkup:
     """
     callback:
