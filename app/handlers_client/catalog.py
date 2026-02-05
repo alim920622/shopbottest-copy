@@ -182,8 +182,24 @@ async def open_product(cq: CallbackQuery, db: Database):
 
     prod = ProductsRepo(db)
     p = await prod.get(product_id)
+
     if not p:
-        await cq.message.edit_text("Товар не найден.", reply_markup=kb_back("order_menu"))
+        text = "Товар не найден."
+        markup = kb_back("order_menu")
+        # ✅ В inline-режиме cq.message может быть None
+        try:
+            if cq.message:
+                await cq.message.edit_text(text, reply_markup=markup)
+            elif cq.inline_message_id:
+                await cq.bot.edit_message_text(
+                    inline_message_id=cq.inline_message_id,
+                    text=text,
+                    reply_markup=markup,
+                )
+        except TelegramBadRequest as e:
+            # "message is not modified" — не ошибка для нас
+            if "message is not modified" not in str(e):
+                raise
         await cq.answer()
         return
 
@@ -191,10 +207,30 @@ async def open_product(cq: CallbackQuery, db: Database):
     if p.get("description"):
         text += f"\nОписание: {p['description']}\n"
 
-    await cq.message.edit_text(
-        text,
-        reply_markup=kb_product_card(product_id=product_id, shop_id=p["shop_id"], category_id=p["category_id"])
+    markup = kb_product_card(
+        product_id=product_id,
+        shop_id=p["shop_id"],
+        category_id=p["category_id"],
     )
+
+    try:
+        if cq.message:
+            await cq.message.edit_text(text, reply_markup=markup)
+        elif cq.inline_message_id:
+            # ✅ Это и есть правильный способ обновить inline-сообщение
+            await cq.bot.edit_message_text(
+                inline_message_id=cq.inline_message_id,
+                text=text,
+                reply_markup=markup,
+            )
+        else:
+            # Теоретически почти не бывает, но лучше не падать
+            await cq.answer("Не удалось открыть товар", show_alert=True)
+            return
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e):
+            raise
+
     await cq.answer()
 
 
