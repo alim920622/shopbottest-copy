@@ -13,14 +13,14 @@ RenderFn = Callable[[], Awaitable[RenderResult]]
 
 @dataclass
 class ChatScreenController:
-    """
-    Контроллер "экранного меню" для чата.
-
-    Идея:
-    - Экран чата = одно сообщение БОТА (screen_message_id в FSM)
-    - Любое обновление: удалить старый экран -> отправить новый экран
-    - Сообщения пользователя в режиме чата стараемся удалять после обработки (чтобы не копились снизу)
-    """
+#    """
+ #   РљРѕРЅС‚СЂРѕР»Р»РµСЂ "СЌРєСЂР°РЅРЅРѕРіРѕ РјРµРЅСЋ" РґР»СЏ С‡Р°С‚Р°.
+#
+ #   РРґРµСЏ:
+  #  - Р­РєСЂР°РЅ С‡Р°С‚Р° = РѕРґРЅРѕ СЃРѕРѕР±С‰РµРЅРёРµ Р‘РћРўРђ (screen_message_id РІ FSM)
+   # - Р›СЋР±РѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ: СѓРґР°Р»РёС‚СЊ СЃС‚Р°СЂС‹Р№ СЌРєСЂР°РЅ -> РѕС‚РїСЂР°РІРёС‚СЊ РЅРѕРІС‹Р№ СЌРєСЂР°РЅ
+   # - РЎРѕРѕР±С‰РµРЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РІ СЂРµР¶РёРјРµ С‡Р°С‚Р° СЃС‚Р°СЂР°РµРјСЃСЏ СѓРґР°Р»СЏС‚СЊ РїРѕСЃР»Рµ РѕР±СЂР°Р±РѕС‚РєРё (С‡С‚РѕР±С‹ РЅРµ РєРѕРїРёР»РёСЃСЊ СЃРЅРёР·Сѓ)
+    #"""
     bot: any
     chat_id: int
     state: any  # FSMContext
@@ -32,14 +32,14 @@ class ChatScreenController:
         try:
             await self.bot.delete_message(self.chat_id, message_id)
         except (TelegramBadRequest, TelegramForbiddenError):
-            # В личке/без прав/если уже удалено — просто игнорируем
+            # Р’ Р»РёС‡РєРµ/Р±РµР· РїСЂР°РІ/РµСЃР»Рё СѓР¶Рµ СѓРґР°Р»РµРЅРѕ вЂ” РїСЂРѕСЃС‚Рѕ РёРіРЅРѕСЂРёСЂСѓРµРј
             return
         except Exception:
-            # Не ломаем UX из-за удаления
+            # РќРµ Р»РѕРјР°РµРј UX РёР·-Р·Р° СѓРґР°Р»РµРЅРёСЏ
             return
 
     async def delete_user_message(self, message: Message) -> None:
-        """Пытаемся удалить сообщение пользователя (чтобы чат был 'одним окном')."""
+ #       """РџС‹С‚Р°РµРјСЃСЏ СѓРґР°Р»РёС‚СЊ СЃРѕРѕР±С‰РµРЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (С‡С‚РѕР±С‹ С‡Р°С‚ Р±С‹Р» 'РѕРґРЅРёРј РѕРєРЅРѕРј')."""
         try:
             await self.bot.delete_message(self.chat_id, message.message_id)
         except (TelegramBadRequest, TelegramForbiddenError):
@@ -48,7 +48,7 @@ class ChatScreenController:
             return
 
     async def delete_screen(self) -> None:
-        """Удалить текущий экран (сообщение бота), если есть."""
+#        """РЈРґР°Р»РёС‚СЊ С‚РµРєСѓС‰РёР№ СЌРєСЂР°РЅ (СЃРѕРѕР±С‰РµРЅРёРµ Р±РѕС‚Р°), РµСЃР»Рё РµСЃС‚СЊ."""
         data = await self.state.get_data()
         prev_id = data.get(self.SCREEN_KEY)
         if prev_id:
@@ -56,10 +56,8 @@ class ChatScreenController:
             await self.state.update_data(**{self.SCREEN_KEY: None})
 
     async def refresh(self) -> int:
-        """
-        Перерисовать экран: удалить старый -> отправить новый.
-        Возвращает message_id нового экрана.
-        """
+ #       """
+  #        """
         data = await self.state.get_data()
         prev_id = data.get(self.SCREEN_KEY)
         if prev_id:
@@ -72,10 +70,10 @@ class ChatScreenController:
         return sent.message_id
 
     async def refresh_after_user_message(self, message: Message) -> int:
-        """
-        Обработали текст пользователя в чате:
-        - попытаться удалить сообщение пользователя
-        - перерисовать экран (новое сообщение бота будет последним)
-        """
+ #       """
+ #       РћР±СЂР°Р±РѕС‚Р°Р»Рё С‚РµРєСЃС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РІ С‡Р°С‚Рµ:
+ #       - РїРѕРїС‹С‚Р°С‚СЊСЃСЏ СѓРґР°Р»РёС‚СЊ СЃРѕРѕР±С‰РµРЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+ #       - РїРµСЂРµСЂРёСЃРѕРІР°С‚СЊ СЌРєСЂР°РЅ (РЅРѕРІРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ Р±РѕС‚Р° Р±СѓРґРµС‚ РїРѕСЃР»РµРґРЅРёРј)
+ #       """
         await self.delete_user_message(message)
         return await self.refresh()
