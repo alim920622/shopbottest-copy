@@ -144,7 +144,7 @@ async def list_shops(cq: CallbackQuery, db: Database, state: FSMContext):
 
 
 @router.callback_query(F.data == "c:home")
-async def client_home(cq: CallbackQuery, state: FSMContext):
+async def client_home(cq: CallbackQuery, db: Database, state: FSMContext):
     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "main", {})
@@ -152,7 +152,7 @@ async def client_home(cq: CallbackQuery, state: FSMContext):
     await cq.answer()
 
 @router.callback_query(F.data == "c:order_menu")
-async def order_menu(cq: CallbackQuery, state: FSMContext):
+async def order_menu(cq: CallbackQuery, db: Database, state: FSMContext):
     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "order_menu", {})

@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import inspect
 from dataclasses import dataclass
 from typing import Awaitable, Callable, Optional, Tuple
 
@@ -10,7 +10,7 @@ from app.db.database import Database
 from app.repositories.ui_screen_repo import UiScreenRepo
 
 RenderResult = Tuple[str, Optional[InlineKeyboardMarkup]]
-RenderFn = Callable[[], Awaitable[RenderResult]]
+RenderFn = Callable[[], RenderResult | Awaitable[RenderResult]]
 
 
 @dataclass
@@ -81,15 +81,22 @@ class ChatScreenController:
         await self._clear_screen_id()
 
     async def refresh(self) -> int:
- #       """
-  #        """
         prev_id = await self._get_screen_id()
         if prev_id:
             await self._safe_delete(int(prev_id))
-
-        text, markup = await self.render()
-        sent = await self.bot.send_message(self.chat_id, text, reply_markup=markup)
-
+    
+        result = self.render()
+        if inspect.isawaitable(result):
+            result = await result
+    
+        text, markup = result
+    
+        sent = await self.bot.send_message(
+            self.chat_id,
+            text,
+            reply_markup=markup,
+        )
+    
         await self._set_screen_id(sent.message_id)
         return sent.message_id
 
