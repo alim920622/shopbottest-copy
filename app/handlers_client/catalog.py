@@ -231,7 +231,7 @@ async def show_category_products(
     category_id: int,
 ):
     prod = ProductsRepo(db)
-    products = await prod.list_by_category(category_id, active_only=True)
+    products = await prod.list_by_category_for_shop(shop_id, category_id, active_only=True)
 
     if not products:
         data = await state.get_data()

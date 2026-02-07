@@ -69,7 +69,7 @@ async def render_client_screen(db: Database, state: FSMContext) -> tuple[str, In
         shop_id = int(payload.get("shop_id") or 0)
         category_id = int(payload.get("category_id") or 0)
         kind = payload.get("kind") or "shop"
-        products = await ProductsRepo(db).list_by_category(category_id, active_only=True)
+        products = await ProductsRepo(db).list_by_category_for_shop(shop_id, category_id, active_only=True)
         if not products:
             back_target = f"categories:{kind}:{shop_id}"
             return "В этой категории пока нет товаров.", kb_back(back_target)
