@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from app.db.database import Database
 from app.handlers_admin_restaurant.start import kb_admin_main
 from app.handlers_admin_restaurant.utils import is_restaurant_admin
-from app.services.chat_screen_controller import ChatScreenController
+from app.services.screen import delete_screen, show_main_menu
 
 router = Router()
 
@@ -21,14 +21,14 @@ async def fallback_handler(message: Message, state: FSMContext, db: Database):
     if not await is_restaurant_admin(db, message.from_user.id):
         await message.answer("Нет доступа. Ваш user_id не назначен админом ресторана.")
         return
-    controller = ChatScreenController(
-        bot=message.bot,
-        chat_id=message.chat.id,
-        state=state,
-        render=lambda: ("Админ-меню ресторана:", kb_admin_main()),
-        db=db,
-        bot_kind="admin_restaurant",
-    )
-    await controller.delete_user_message(message)
+    await delete_screen(message.bot, message.chat.id, state, db, "admin_restaurant")
     await message.answer("Я не понял команду. Используйте меню ниже.")
-    await controller.refresh()
+    await show_main_menu(
+        message.bot,
+        message.chat.id,
+        state,
+        db,
+        "admin_restaurant",
+        "Админ-меню ресторана:",
+        kb_admin_main(),
+    )
