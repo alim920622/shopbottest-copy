@@ -8,12 +8,13 @@ from app.db.database import Database
 from app.services.chat_screen_controller import ChatScreenController
 from app.services.client_ui_renderer import render_client_screen
 from app.services.message_cleanup import delete_later
+from app.i18n.client.translator import t
 
 router = Router()
 
 
 @router.message(F.text)
-async def fallback_handler(message: Message, state: FSMContext, db: Database):
+async def fallback_handler(message: Message, state: FSMContext, db: Database, locale: str = "ru"):
     if message.via_bot is not None:
         return
 
@@ -30,6 +31,6 @@ async def fallback_handler(message: Message, state: FSMContext, db: Database):
     )
 
     await controller.delete_user_message(message)
-    notice = await message.answer("Команда неверна. Используйте меню ниже.")
+    notice = await message.answer(t(locale, "msg.unknown_command"))
     asyncio.create_task(delete_later(message.bot, message.chat.id, notice.message_id, delay=4))
     await controller.refresh()

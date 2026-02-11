@@ -18,6 +18,7 @@ from app.repositories.notif_center_repo import NotifCenterRepo
 from app.services.client_ui_state import remember_client_screen
 from app.services.chat_screen_controller import ChatScreenController
 from app.services.screen import show_screen
+from app.i18n.client.translator import t
 
 PAGE_SIZE = 6
 NOTIF_PREV_SCREEN_KEY = "notif_prev_ui_screen"
@@ -112,13 +113,13 @@ def parse_notif_context(callback_data: str) -> tuple[str | None, int | None]:
     return src, page
 
 
-async def build_client_center_payload(db: Database, user_id: int) -> tuple[str, InlineKeyboardMarkup]:
+async def build_client_center_payload(db: Database, user_id: int, locale: str = "ru") -> tuple[str, InlineKeyboardMarkup]:
     unread_orders = await ChatReadsRepo(db).count_unread_orders("client", user_id)
-    text = f"🔔 Уведомления\n\n💬 Новые сообщения: {unread_orders}"
+    text = t(locale, "notif.center", unread_orders=unread_orders)
     rows: list[list[InlineKeyboardButton]] = []
     if unread_orders > 0:
-        rows.append([InlineKeyboardButton(text="💬 Сообщения", callback_data="c:notif:msgs")])
-    rows.append([InlineKeyboardButton(text="↩️ Вернуться", callback_data="c:notif:return")])
+        rows.append([InlineKeyboardButton(text=t(locale, "notif.messages"), callback_data="c:notif:msgs")])
+    rows.append([InlineKeyboardButton(text=t(locale, "notif.return"), callback_data="c:notif:return")])
     return text, InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -126,6 +127,7 @@ async def build_client_messages_payload(
     db: Database,
     user_id: int,
     page: int,
+    locale: str = "ru",
 ) -> tuple[str, InlineKeyboardMarkup]:
     repo = ChatReadsRepo(db)
     total = await repo.count_unread_orders("client", user_id)
@@ -138,10 +140,10 @@ async def build_client_messages_payload(
     for item in rows_data:
         order_id = int(item["order_id"])
         unread_count = int(item["unread_count"])
-        suffix = "новых"
+        suffix = t(locale, "notif.new_suffix")
         rows.append([
             InlineKeyboardButton(
-                text=f"💬 Заказ #{order_id} · {unread_count} {suffix}",
+                text=t(locale, "notif.order_item", order_id=order_id, unread_count=unread_count, suffix=suffix),
                 callback_data=_with_notif_context(f"c:chat:{order_id}", NOTIF_SRC_MSGS, page),
             )
         ])
@@ -149,8 +151,8 @@ async def build_client_messages_payload(
     pagination = _build_pagination("c", "notif:msgp", page, total_pages)
     if pagination:
         rows.append(pagination)
-    rows.append([InlineKeyboardButton(text="🔙 Назад", callback_data="c:notif:back")])
-    return "💬 Новые сообщения", InlineKeyboardMarkup(inline_keyboard=rows)
+    rows.append([InlineKeyboardButton(text=t(locale, "nav.back"), callback_data="c:notif:back")])
+    return t(locale, "notif.messages"), InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 async def build_admin_center_payload(
@@ -238,7 +240,7 @@ async def build_admin_messages_payload(
     if pagination:
         rows.append(pagination)
     rows.append([InlineKeyboardButton(text="🔙 Назад", callback_data=f"{prefix}:notif:back")])
-    return "💬 Новые сообщения", InlineKeyboardMarkup(inline_keyboard=rows)
+    return t(locale, "notif.messages"), InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 async def remember_admin_prev_target(db: Database, bot_kind: str, user_id: int, target: str) -> None:

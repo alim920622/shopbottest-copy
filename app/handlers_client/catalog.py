@@ -24,6 +24,7 @@ from app.services.screen import (
 from app.services.client_ui_state import remember_client_screen
 from app.services.chat_reminders import is_chat_reminder_text
 from app.utils.tg_safe import safe_delete_cq_message
+from app.i18n.client.translator import t
 from app.handlers_client.kb import (
     kb_client_main,
     kb_order_menu,
@@ -91,7 +92,7 @@ def _parse_cart_back_target(parts: list[str]) -> dict | None:
 
 
 @router.message(F.via_bot.is_not(None), F.text.regexp(SKU_RE))
-async def open_product_from_inline_sku(message: Message, db: Database, state: FSMContext):
+async def open_product_from_inline_sku(message: Message, db: Database, state: FSMContext, locale: str = "ru"):
 
 
     sku = _parse_sku_from_message(message.text)
@@ -113,7 +114,7 @@ async def open_product_from_inline_sku(message: Message, db: Database, state: FS
     text = _build_product_card_text(product)
     sent = await message.answer(
         text,
-        reply_markup=kb_product_card_shop(
+        reply_markup=kb_product_card_shop(locale, 
             shop_id=int(product["shop_id"]),
             category_id=int(product["category_id"]),
             sku=sku,
@@ -137,19 +138,19 @@ async def open_product_from_inline_sku(message: Message, db: Database, state: FS
 
 
 @router.callback_query(F.data == "c:shops")
-async def list_shops(cq: CallbackQuery, db: Database, state: FSMContext):
+async def list_shops(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     repo = ShopsRepo(db)
     items = await repo.list_active(business_type="shop")
 
     if not items:
-        await cq.message.edit_text("Магазинов пока нет.", reply_markup=kb_back("order_menu"))
+        await cq.message.edit_text(t(locale, "shops.empty"), reply_markup=kb_back(locale, "order_menu"))
         await cq.answer()
         return
 
     await state.update_data(last_kind="shop", last_view={"name": "shops_list"})
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "shops", {})
-    await cq.message.edit_text("Выберите магазин:", reply_markup=kb_shops_list(items, "shop"))
+    await cq.message.edit_text(t(locale, "shops.select"), reply_markup=kb_shops_list(locale, items, "shop"))
     await cq.answer()
 
 
@@ -167,11 +168,11 @@ async def client_home(cq: CallbackQuery, db: Database, state: FSMContext):
             state=state,
             db=db,
             bot_kind="client",
-            text="Выберите раздел:",
-            reply_markup=kb_client_main(),
+            text=t(locale, "main.select_section"),
+            reply_markup=kb_client_main(locale),
         )
     else:
-        await cq.message.edit_text("Выберите раздел:", reply_markup=kb_client_main())
+        await cq.message.edit_text(t(locale, "main.select_section"), reply_markup=kb_client_main(locale))
     await cq.answer()
 
 @router.callback_query(F.data == "c:order_menu")
@@ -179,7 +180,7 @@ async def order_menu(cq: CallbackQuery, db: Database, state: FSMContext):
     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "order_menu", {})
-    await cq.message.edit_text("Что будем заказывать?", reply_markup=kb_order_menu())
+    await cq.message.edit_text(t(locale, "order_menu.prompt"), reply_markup=kb_order_menu(locale))
     await cq.answer()
 
 @router.callback_query(F.data == "c:cart_menu")
@@ -187,28 +188,28 @@ async def cart_menu(cq: CallbackQuery, state: FSMContext):
     await state.update_data(last_view={"name": "cart_menu"})
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "cart_menu", {})
-    await cq.message.edit_text("Выберите корзину:", reply_markup=kb_cart_menu())
+    await cq.message.edit_text(t(locale, "cart.select"), reply_markup=kb_cart_menu(locale))
     await cq.answer()
 
 @router.callback_query(F.data == "c:restaurants")
-async def list_restaurants(cq: CallbackQuery, db: Database, state: FSMContext):
+async def list_restaurants(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     repo = ShopsRepo(db)
     items = await repo.list_active(business_type="restaurant")
 
     if not items:
-        await cq.message.edit_text("Ресторанов пока нет.", reply_markup=kb_back("order_menu"))
+        await cq.message.edit_text(t(locale, "restaurants.empty"), reply_markup=kb_back(locale, "order_menu"))
         await cq.answer()
         return
 
     await state.update_data(last_kind="restaurant", last_view={"name": "restaurants_list"})
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "restaurants", {})
-    await cq.message.edit_text("Выберите ресторан:", reply_markup=kb_shops_list(items, "restaurant"))
+    await cq.message.edit_text(t(locale, "restaurants.select"), reply_markup=kb_shops_list(locale, items, "restaurant"))
     await cq.answer()
 
 
 @router.callback_query(F.data.startswith("c:pick:"))
-async def pick_shop(cq: CallbackQuery, db: Database, state: FSMContext):
+async def pick_shop(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     # c:pick:{kind}:{shop_id}
     _, _, kind, shop_id_str = cq.data.split(":", 3)
     shop_id = int(shop_id_str)
@@ -228,21 +229,21 @@ async def show_categories(message: Message, db: Database, kind: str, shop_id: in
     cats = CategoriesRepo(db)
     categories = await cats.list_for_shop(shop_id, active_only=True)
     if not categories:
-        await message.edit_text("Категорий пока нет.", reply_markup=kb_back(f"{kind}_list"))
+        await message.edit_text(t(locale, "categories.empty"), reply_markup=kb_back(locale, f"{kind}_list"))
         return
 
     title = "Категории магазина:" if kind == "shop" else "Категории ресторана:"
-    await message.edit_text(title, reply_markup=kb_categories_list(categories, kind, shop_id))
+    await message.edit_text(title, reply_markup=kb_categories_list(locale, categories, kind, shop_id))
 
 
 @router.callback_query(F.data.startswith("c:cat:"))
-async def open_category(cq: CallbackQuery, db: Database, state: FSMContext):
+async def open_category(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     # c:cat:{shop_id}:{category_id}
     _, _, shop_id_str, category_id_str = cq.data.split(":", 3)
     shop_id = int(shop_id_str)
     category_id = int(category_id_str)
 
-    await show_category_products(cq.message, db, state, shop_id, category_id)
+    await show_category_products(cq.message, db, state, shop_id, category_id, locale)
     await cq.answer()
 
 
@@ -252,6 +253,7 @@ async def show_category_products(
     state: FSMContext,
     shop_id: int,
     category_id: int,
+    locale: str = "ru",
 ):
     prod = ProductsRepo(db)
     products = await prod.list_by_category_for_shop(shop_id, category_id, active_only=True)
@@ -264,7 +266,7 @@ async def show_category_products(
             shop = await shops.get(shop_id)
             last_kind = shop["business_type"] if shop else None
         back_target = f"categories:{last_kind}:{shop_id}" if last_kind else "order_menu"
-        await message.edit_text("В этой категории пока нет товаров.", reply_markup=kb_back(back_target))
+        await message.edit_text(t(locale, "products.empty"), reply_markup=kb_back(locale, back_target))
         return
 
     await state.update_data(last_view={"name": "products", "shop_id": shop_id, "category_id": category_id})
@@ -275,16 +277,16 @@ async def show_category_products(
         "products",
         {"shop_id": shop_id, "category_id": category_id, "kind": kind},
     )
-    products_kb = kb_products_list_shop(products, shop_id, category_id) if kind == "shop" else kb_products_list(products, shop_id, category_id)
+    products_kb = kb_products_list_shop(locale, products, shop_id, category_id) if kind == "shop" else kb_products_list(locale, products, shop_id, category_id)
 
     await message.edit_text(
-        "Список товаров:",
+        t(locale, "products.list_title"),
         reply_markup=products_kb
     )
 
 
 @router.callback_query(F.data.startswith("c:prod:"))
-async def open_product(cq: CallbackQuery, db: Database, state: FSMContext):
+async def open_product(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     # c:prod:{product_id}
     product_id = int(cq.data.split(":")[2])
 
@@ -292,8 +294,8 @@ async def open_product(cq: CallbackQuery, db: Database, state: FSMContext):
     p = await prod.get(product_id)
 
     if not p:
-        text = "Товар не найден."
-        markup = kb_back("order_menu")
+        text = t(locale, "product.not_found")
+        markup = kb_back(locale, "order_menu")
         # ✅ В inline-режиме cq.message может быть None
         try:
             if cq.message:
@@ -315,7 +317,7 @@ async def open_product(cq: CallbackQuery, db: Database, state: FSMContext):
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "product_card", {"product_id": product_id})
 
-    markup = kb_product_card(
+    markup = kb_product_card(locale, 
         product_id=product_id,
         shop_id=p["shop_id"],
         category_id=p["category_id"],
@@ -333,7 +335,7 @@ async def open_product(cq: CallbackQuery, db: Database, state: FSMContext):
             )
         else:
             # Теоретически почти не бывает, но лучше не падать
-            await cq.answer("Не удалось открыть товар", show_alert=True)
+            await cq.answer(t(locale, "product.open_failed"), show_alert=True)
             return
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e):
@@ -352,14 +354,14 @@ async def open_product_by_sku(cq: CallbackQuery, db: Database, state: FSMContext
 
     shop = await ShopsRepo(db).get(shop_id)
     if not shop or shop.get("business_type") != "shop":
-        await safe_edit_text(cq, "Товар не найден.", reply_markup=kb_back("order_menu"))
+        await safe_edit_text(cq, t(locale, "product.not_found"), reply_markup=kb_back(locale, "order_menu"))
         await cq.answer()
         return
 
     prod = ProductsRepo(db)
     p = await prod.get_by_sku(shop_id=shop_id, sku=sku)
     if not p:
-        await safe_edit_text(cq, "Товар не найден.", reply_markup=kb_back("order_menu"))
+        await safe_edit_text(cq, t(locale, "product.not_found"), reply_markup=kb_back(locale, "order_menu"))
         await cq.answer()
         return
 
@@ -370,7 +372,7 @@ async def open_product_by_sku(cq: CallbackQuery, db: Database, state: FSMContext
     await safe_edit_text(
         cq,
         text,
-        reply_markup=kb_product_card_shop(shop_id=shop_id, category_id=p["category_id"], sku=sku),
+        reply_markup=kb_product_card_shop(locale, shop_id=shop_id, category_id=p["category_id"], sku=sku),
     )
     await cq.answer()
 
@@ -394,7 +396,7 @@ async def add_to_cart_by_sku(cq: CallbackQuery, db: Database):
 
     cart = CartRepo(db)
     await cart.add(user_id=cq.from_user.id, product_id=int(p["id"]), qty=1)
-    await cq.answer("Добавлено в корзину")
+    await cq.answer(t(locale, "cart.added"))
 
 @router.callback_query(F.data.startswith("c:add:"))
 async def add_to_cart(cq: CallbackQuery, db: Database):
@@ -410,7 +412,7 @@ async def add_to_cart(cq: CallbackQuery, db: Database):
     cart = CartRepo(db)
     await cart.add(user_id=cq.from_user.id, product_id=product_id, qty=1)
 
-    await cq.answer("Добавлено в корзину")
+    await cq.answer(t(locale, "cart.added"))
 
 
 @router.callback_query(F.data.startswith("c:pickback:"))
@@ -422,19 +424,19 @@ async def back_to_categories(cq: CallbackQuery, db: Database):
     shops = ShopsRepo(db)
     shop = await shops.get(shop_id)
     if not shop:
-        await cq.message.edit_text("Точка не найдена.", reply_markup=kb_back("order_menu"))
+        await cq.message.edit_text(t(locale, "shop.not_found"), reply_markup=kb_back(locale, "order_menu"))
         await cq.answer()
         return
 
     cats = CategoriesRepo(db)
     categories = await cats.list_for_shop(shop_id, active_only=True)
     if not categories:
-        await cq.message.edit_text("Категорий пока нет.", reply_markup=kb_back("order_menu"))
+        await cq.message.edit_text(t(locale, "categories.empty"), reply_markup=kb_back(locale, "order_menu"))
         await cq.answer()
         return
 
     title = "Категории магазина:" if shop["business_type"] == "shop" else "Категории ресторана:"
-    await cq.message.edit_text(title, reply_markup=kb_categories_list(categories, shop["business_type"], shop_id))
+    await cq.message.edit_text(title, reply_markup=kb_categories_list(locale, categories, shop["business_type"], shop_id))
     await cq.answer()
 
 
@@ -477,11 +479,11 @@ async def back(cq: CallbackQuery, db: Database, state: FSMContext):
             await cq.answer()
             return
         if return_view and return_view.get("name") == "cart_menu":
-            await cq.message.edit_text("Выберите корзину:", reply_markup=kb_cart_menu())
+            await cq.message.edit_text(t(locale, "cart.select"), reply_markup=kb_cart_menu(locale))
             await cq.answer()
             return
         if return_view and return_view.get("name") == "order_menu":
-            await cq.message.edit_text("Что будем заказывать?", reply_markup=kb_order_menu())
+            await cq.message.edit_text(t(locale, "order_menu.prompt"), reply_markup=kb_order_menu(locale))
             await cq.answer()
             return
         if return_view and return_view.get("name") == "shops_list":
@@ -490,30 +492,30 @@ async def back(cq: CallbackQuery, db: Database, state: FSMContext):
         if return_view and return_view.get("name") == "restaurants_list":
             await list_restaurants(cq, db, state)
             return
-        await cq.message.edit_text("Что будем заказывать?", reply_markup=kb_order_menu())
+        await cq.message.edit_text(t(locale, "order_menu.prompt"), reply_markup=kb_order_menu(locale))
         await cq.answer()
         return
 
     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
 
     if target == "main":
-        await cq.message.edit_text("Выберите раздел:", reply_markup=kb_client_main())
+        await cq.message.edit_text(t(locale, "main.select_section"), reply_markup=kb_client_main(locale))
         await cq.answer()
         return
 
     if target == "shop_list":
         # вернуться в список магазинов
-        await cq.message.edit_text("Что будем заказывать?", reply_markup=kb_order_menu())
+        await cq.message.edit_text(t(locale, "order_menu.prompt"), reply_markup=kb_order_menu(locale))
         await cq.answer()
         return
 
     if target == "restaurant_list":
-        await cq.message.edit_text("Что будем заказывать?", reply_markup=kb_order_menu())
+        await cq.message.edit_text(t(locale, "order_menu.prompt"), reply_markup=kb_order_menu(locale))
         await cq.answer()
         return
 
     if target == "order_menu":
-        await cq.message.edit_text("Что будем заказывать?", reply_markup=kb_order_menu())
+        await cq.message.edit_text(t(locale, "order_menu.prompt"), reply_markup=kb_order_menu(locale))
         await cq.answer()
         return
 
@@ -537,11 +539,11 @@ async def back(cq: CallbackQuery, db: Database, state: FSMContext):
         return
 
     if target == "cart_menu":
-        await cq.message.edit_text("Выберите корзину:", reply_markup=kb_cart_menu())
+        await cq.message.edit_text(t(locale, "cart.select"), reply_markup=kb_cart_menu(locale))
         await cq.answer()
         return
 
-    await cq.answer("Неизвестный переход", show_alert=True)
+    await cq.answer(t(locale, "nav.unknown"), show_alert=True)
 
 
 async def render_cart(
@@ -550,12 +552,13 @@ async def render_cart(
     db: Database,
     business_type: str | None = None,
     back_target: str | None = None,
+    locale: str = "ru",
 ):
     cart = CartRepo(db)
     items = await cart.list_items(user_id, business_type=business_type)
 
     if not items:
-        await message.edit_text("Корзина пуста.", reply_markup=kb_cart_empty(back_target))
+        await message.edit_text(t(locale, "cart.empty"), reply_markup=kb_cart_empty(locale, back_target))
         return
 
     cart_title = "🧺 Корзина"
@@ -571,12 +574,12 @@ async def render_cart(
         text_lines.append(f"- {i['name']} x{i['quantity']} = {line_total}")
     text_lines.append(f"\nИтого: {total}")
 
-    await message.edit_text("\n".join(text_lines), reply_markup=kb_cart(items, back_target))
+    await message.edit_text("\n".join(text_lines), reply_markup=kb_cart(locale, items, back_target))
 
 
 # Фильтр с точным совпадением и префиксом через ":" нужен, чтобы не перехватывать c:cart_inc/dec/del.
 @router.callback_query((F.data == "c:cart") | (F.data.startswith("c:cart:")))
-async def open_cart(cq: CallbackQuery, db: Database, state: FSMContext):
+async def open_cart(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     data = await state.get_data()
     parts = cq.data.split(":")
     kind = parts[2] if len(parts) > 2 else "auto"
@@ -606,6 +609,7 @@ async def open_cart(cq: CallbackQuery, db: Database, state: FSMContext):
         db,
         business_type=business_type,
         back_target=":".join(back_parts) if back_parts else None,
+        locale=locale,
     )
     await cq.answer()
 
@@ -616,25 +620,25 @@ async def noop(cq: CallbackQuery):
 
 
 @router.callback_query(F.data.startswith("c:search:"))
-async def search_prompt(cq: CallbackQuery, state: FSMContext):
+async def search_prompt(cq: CallbackQuery, state: FSMContext, locale: str = "ru"):
     # c:search:{kind}:{shop_id}
     _, _, kind, shop_id_str = cq.data.split(":", 3)
     await state.set_state(ClientCatalogStates.search)
     await state.update_data(search_shop_id=int(shop_id_str), search_kind=kind)
     await cq.message.edit_text(
         "Введите текст для поиска. Я буду показывать результаты по мере ввода.",
-        reply_markup=kb_back(f"categories:{kind}:{shop_id_str}"),
+        reply_markup=kb_back(locale, f"categories:{kind}:{shop_id_str}"),
     )
     await cq.answer()
 
 
 @router.callback_query(F.data.startswith("c:at_search:"))
-async def inline_search_prompt(cq: CallbackQuery):
+async def inline_search_prompt(cq: CallbackQuery, locale: str = "ru"):
     _, _, kind, shop_id_str = cq.data.split(":", 3)
     if kind != "shop":
         await cq.message.edit_text(
-            "Inline-поиск доступен только для магазинов.",
-            reply_markup=kb_back(f"categories:{kind}:{shop_id_str}"),
+            t(locale, "search.inline_unavailable"),
+            reply_markup=kb_back(locale, f"categories:{kind}:{shop_id_str}"),
         )
         await cq.answer()
         return
@@ -649,45 +653,45 @@ async def inline_search_prompt(cq: CallbackQuery):
     )
     await cq.message.edit_text(
         text,
-        reply_markup=kb_inline_search(f"c:back:categories:{kind}:{shop_id_str}"),
+        reply_markup=kb_inline_search(locale, f"c:back:categories:{kind}:{shop_id_str}"),
     )
     await cq.answer()
 
 
 @router.message(ClientCatalogStates.search)
-async def search_input(message: Message, state: FSMContext, db: Database):
+async def search_input(message: Message, state: FSMContext, db: Database, locale: str = "ru"):
     data = await state.get_data()
     shop_id = int(data.get("search_shop_id") or 0)
     kind = data.get("search_kind") or "shop"
     query = (message.text or "").strip()
     if not query:
-        await message.answer("Введите текст для поиска.")
+        await message.answer(t(locale, "search.enter_text"))
         return
 
     service = SearchService(db)
     results = await service.search_products(shop_id=shop_id, query=query, active_only=True)
     if not results:
-        await message.answer("Ничего не найдено. Попробуйте другой запрос.")
+        await message.answer(t(locale, "search.not_found"))
         return
 
     products = [r.product for r in results]
     reply_markup = (
-        kb_products_list_shop(products, shop_id, products[0]["category_id"])
+        kb_products_list_shop(locale, products, shop_id, products[0]["category_id"])
         if kind == "shop"
-        else kb_products_list(products, shop_id, products[0]["category_id"])
+        else kb_products_list(locale, products, shop_id, products[0]["category_id"])
     )
     await message.answer(
-        "Найденные товары:",
+        t(locale, "search.results_title"),
         reply_markup=reply_markup,
     )
 
 
 @router.callback_query(F.data.startswith("c:cart_inc:"))
-async def cart_inc(cq: CallbackQuery, db: Database, state: FSMContext):
+async def cart_inc(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     product_id = int(cq.data.split(":")[2])
     cart = CartRepo(db)
     await cart.add(user_id=cq.from_user.id, product_id=product_id, qty=1)
-    await cq.answer("Ок")
+    await cq.answer(t(locale, "cart.inc_ok"))
     # обновим экран корзины
     data = await state.get_data()
     await render_cart(
@@ -696,37 +700,39 @@ async def cart_inc(cq: CallbackQuery, db: Database, state: FSMContext):
         db,
         business_type=data.get("cart_kind"),
         back_target=data.get("cart_back_target"),
+        locale=locale,
     )
 
 
 @router.callback_query(F.data.startswith("c:cart_dec:"))
-async def cart_dec(cq: CallbackQuery, db: Database, state: FSMContext):
+async def cart_dec(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     product_id = int(cq.data.split(":")[2])
     cart = CartRepo(db)
     data = await state.get_data()
     items = await cart.list_items(cq.from_user.id, business_type=data.get("cart_kind"))
     current = next((x for x in items if x["product_id"] == product_id), None)
     if not current:
-        await cq.answer("Нет в корзине", show_alert=True)
+        await cq.answer(t(locale, "cart.dec_none"), show_alert=True)
         return
     new_qty = int(current["quantity"]) - 1
     await cart.set_qty(user_id=cq.from_user.id, product_id=product_id, qty=new_qty)
-    await cq.answer("Ок")
+    await cq.answer(t(locale, "cart.inc_ok"))
     await render_cart(
         cq.message,
         cq.from_user.id,
         db,
         business_type=data.get("cart_kind"),
         back_target=data.get("cart_back_target"),
+        locale=locale,
     )
 
 
 @router.callback_query(F.data.startswith("c:cart_del:"))
-async def cart_del(cq: CallbackQuery, db: Database, state: FSMContext):
+async def cart_del(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     product_id = int(cq.data.split(":")[2])
     cart = CartRepo(db)
     await cart.set_qty(user_id=cq.from_user.id, product_id=product_id, qty=0)
-    await cq.answer("Удалено")
+    await cq.answer(t(locale, "cart.deleted"))
     data = await state.get_data()
     await render_cart(
         cq.message,
@@ -734,16 +740,17 @@ async def cart_del(cq: CallbackQuery, db: Database, state: FSMContext):
         db,
         business_type=data.get("cart_kind"),
         back_target=data.get("cart_back_target"),
+        locale=locale,
     )
 
 
 @router.callback_query(F.data == "c:checkout")
-async def checkout(cq: CallbackQuery, db: Database, state: FSMContext):
+async def checkout(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     cart = CartRepo(db)
     data = await state.get_data()
     items = await cart.list_items(cq.from_user.id, business_type=data.get("cart_kind"))
     if not items:
-        await cq.message.edit_text("Корзина пуста.", reply_markup=kb_back("cart_menu"))
+        await cq.message.edit_text(t(locale, "cart.empty"), reply_markup=kb_back(locale, "cart_menu"))
         await cq.answer()
         return
 
@@ -755,14 +762,14 @@ async def checkout(cq: CallbackQuery, db: Database, state: FSMContext):
 
     # если в корзине товары из разных точек — выбрать
     await cq.message.edit_text(
-        "В корзине товары из разных магазинов/ресторанов. Выберите, для какой точки оформить заказ:",
-        reply_markup=kb_checkout_choose_shop(shop_ids),
+        t(locale, "checkout.multiple_shops"),
+        reply_markup=kb_checkout_choose_shop(locale, shop_ids),
     )
     await cq.answer()
 
 
 @router.callback_query(F.data.startswith("c:checkout_shop:"))
-async def checkout_pick_shop(cq: CallbackQuery, db: Database, state: FSMContext):
+async def checkout_pick_shop(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     shop_id = int(cq.data.split(":")[2])
     await _render_checkout_confirm(cq, db, state, shop_id, back_cb="c:checkout_back")
 
@@ -773,26 +780,26 @@ async def checkout_back(cq: CallbackQuery, state: FSMContext):
     shop_ids = data.get("checkout_shop_ids") or []
     if shop_ids:
         await cq.message.edit_text(
-            "В корзине товары из разных магазинов/ресторанов. Выберите, для какой точки оформить заказ:",
-            reply_markup=kb_checkout_choose_shop(shop_ids),
+            t(locale, "checkout.multiple_shops"),
+            reply_markup=kb_checkout_choose_shop(locale, shop_ids),
         )
         await cq.answer()
         return
-    await cq.message.edit_text("Корзина пуста.", reply_markup=kb_back("cart_menu"))
+    await cq.message.edit_text(t(locale, "cart.empty"), reply_markup=kb_back(locale, "cart_menu"))
     await cq.answer()
 
 
 @router.callback_query(F.data.startswith("c:checkout_confirm:"))
-async def checkout_confirm(cq: CallbackQuery, db: Database, state: FSMContext):
+async def checkout_confirm(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     shop_id = int(cq.data.split(":")[2])
     await _create_order_for_shop(cq, db, state, shop_id)
 
 
 @router.callback_query(F.data == "c:checkout_comment")
-async def checkout_comment(cq: CallbackQuery, state: FSMContext, db: Database):
+async def checkout_comment(cq: CallbackQuery, state: FSMContext, db: Database, locale: str = "ru"):
     await set_screen_message_id(state, db, "client", cq.message.chat.id, cq.message.message_id)
     await state.set_state(ClientCatalogStates.waiting_order_comment)
-    await cq.message.edit_text("Напишите комментарий к заказу обычным текстом:")
+    await cq.message.edit_text(t(locale, "checkout.comment_prompt"))
     await cq.answer()
 
 
@@ -830,9 +837,9 @@ async def _build_checkout_confirm_payload(
     items = await cart.list_items(user_id, business_type=data.get("cart_kind"))
     shop_items = [it for it in items if int(it["shop_id"]) == shop_id]
     if not shop_items:
-        return "Корзина пуста для этой точки.", kb_back("cart_menu")
+        return t(locale, "cart.empty_for_shop"), kb_back(locale, "cart_menu")
     total = sum(float(i["price"]) * int(i["quantity"]) for i in shop_items)
-    lines = ["Подтвердите оформление заказа:"]
+    lines = [t(locale, "checkout.confirm_title")]
     for i in shop_items:
         line_total = float(i["price"]) * int(i["quantity"])
         lines.append(f"- {i['name']} x{i['quantity']} = {line_total}")
@@ -842,7 +849,7 @@ async def _build_checkout_confirm_payload(
     lines.append(comment or "— не добавлен —")
     return (
         "\n".join(lines),
-        kb_checkout_confirm(
+        kb_checkout_confirm(locale, 
             confirm_cb=f"c:checkout_confirm:{shop_id}",
             back_cb=back_cb,
         ),
@@ -850,7 +857,7 @@ async def _build_checkout_confirm_payload(
 
 
 @router.message(ClientCatalogStates.waiting_order_comment)
-async def save_order_comment(message: Message, state: FSMContext, db: Database):
+async def save_order_comment(message: Message, state: FSMContext, db: Database, locale: str = "ru"):
     if not message.text:
         await message.answer("Отправьте комментарий текстом.")
         return
@@ -898,8 +905,8 @@ async def _create_order_for_shop(cq: CallbackQuery, db: Database, state: FSMCont
         )
     except ValueError:
         await cq.message.edit_text(
-            "Не удалось создать заказ: корзина пуста или заказ уже создан для этой точки.",
-            reply_markup=kb_back("main"),
+            t(locale, "checkout.create_failed"),
+            reply_markup=kb_back(locale, "main"),
         )
         await cq.answer()
         return
@@ -913,7 +920,7 @@ async def _create_order_for_shop(cq: CallbackQuery, db: Database, state: FSMCont
     # 3) ответ клиенту
     await cq.message.edit_text(
         f"✅ Заказ успешно создан!\nНомер заказа: {order_id}\nСтатус: new",
-        reply_markup=kb_after_order(),
+        reply_markup=kb_after_order(locale),
     )
     await state.update_data(
         order_comment="",

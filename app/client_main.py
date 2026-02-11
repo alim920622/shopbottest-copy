@@ -12,6 +12,7 @@ from app.handlers_client.cabinet import router as cabinet_router
 from app.handlers_client.inline_search import router as inline_search_router
 from app.handlers_client.notifications import router as notifications_router
 from app.handlers_client.fallback import router as fallback_router
+from app.handlers_client.middleware import ClientLocaleMiddleware
 from app.services.chat_reminders import run_chat_reminder_worker
 
 
@@ -29,6 +30,10 @@ async def main():
 
     # пробросим db в data (глобально)
     dp["db"] = db
+
+    locale_middleware = ClientLocaleMiddleware()
+    dp.message.middleware(locale_middleware)
+    dp.callback_query.middleware(locale_middleware)
 
     dp.include_router(start_router)
     dp.include_router(catalog_router)

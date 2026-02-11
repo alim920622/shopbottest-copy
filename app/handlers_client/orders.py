@@ -29,6 +29,7 @@ from app.services.screen import clear_state_keep_screen, show_screen
 from app.services.chat_screen_controller import ChatScreenController
 from app.services.client_ui_state import remember_client_screen
 from app.services.notification_center import parse_notif_context, NOTIF_SRC_MSGS
+from app.i18n.client.translator import t
 from app.utils.tg_safe import safe_delete_cq_message
 
 router = Router()
@@ -42,15 +43,15 @@ class ClientChatStates(StatesGroup):
     active = State()
 
 
-def kb_order_card(order_id: int, back_cb: str, can_cancel: bool) -> InlineKeyboardMarkup:
+def kb_order_card(locale: str, order_id: int, back_cb: str, can_cancel: bool = False) -> InlineKeyboardMarkup:
     kb = [
-        [InlineKeyboardButton(text="💬 Чат по заказу", callback_data=f"c:chat:{order_id}")],
+        [InlineKeyboardButton(text=t(locale, "order_card.chat"), callback_data=f"c:chat:{order_id}")],
     ]
     if can_cancel:
-        kb.append([InlineKeyboardButton(text="❌ Отменить заказ", callback_data=f"c:cancel:{order_id}")])
+        kb.append([InlineKeyboardButton(text=t(locale, "order.cancel"), callback_data=f"c:cancel:{order_id}")])
     kb.append([
-        InlineKeyboardButton(text="🏠 Главная", callback_data="c:home"),
-        InlineKeyboardButton(text="🔙 Назад", callback_data=back_cb),
+        InlineKeyboardButton(text=t(locale, "nav.home"), callback_data="c:home"),
+        InlineKeyboardButton(text=t(locale, "nav.back"), callback_data=back_cb),
     ])
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
@@ -81,17 +82,17 @@ def _can_cancel_order(order: dict | None, now: datetime | None = None) -> bool:
     return now - created_at <= timedelta(minutes=CANCEL_WINDOW_MINUTES)
 
 
-def _build_order_text(order: dict, items: list[dict], shop_name: str) -> str:
+def _build_order_text(locale: str, order: dict, items: list[dict], shop_name: str) -> str:
     comment = (order.get("comment") or "").strip()
-    comment_line = comment or "— не добавлен —"
+    comment_line = comment or t(locale, "cabinet.empty_value")
     lines = [
-        f"Заказ #{order['id']}",
-        f"Точка: {shop_name}",
-        f"Статус: {order['status']}",
-        f"Сумма: {order['total_amount']}",
-        f"Комментарий: {comment_line}",
+        t(locale, "orders.item_tpl", order_id=order["id"]),
+        t(locale, "order.shop", shop_name=shop_name),
+        t(locale, "order.status", status=order["status"]),
+        t(locale, "order.total", total=order["total_amount"]),
+        t(locale, "order.comment", comment=comment_line),
         "",
-        "Состав:",
+        t(locale, "order.items_title"),
     ]
     for it in items:
         lines.append(f"- {it['name']} x{it['quantity']} = {it['price_at_moment']}")
@@ -102,14 +103,15 @@ async def _render_order_card(
     cq: CallbackQuery,
     state: FSMContext,
     db: Database,
+    locale: str,
     order: dict,
     items: list[dict],
     shop_name: str,
 ) -> None:
     back_cb = "c:history" if order["status"] in DONE_STATUSES else "c:orders"
-    text = _build_order_text(order, items, shop_name)
+    text = _build_order_text(locale, order, items, shop_name)
     can_cancel = _can_cancel_order(order)
-    reply_markup = kb_order_card(int(order["id"]), back_cb, can_cancel)
+    reply_markup = kb_order_card(locale, int(order["id"]), back_cb, can_cancel)
     if is_chat_reminder_text(cq.message.text if cq.message else None):
         # Для напоминания сначала удаляем сообщение, потом показываем карточку.
         await safe_delete_cq_message(cq)
@@ -126,12 +128,12 @@ async def _render_order_card(
         await cq.message.edit_text(text, reply_markup=reply_markup)
 
 
-def kb_chat_nav_rows(order_id: int, back_target: str | None = None) -> list[list[InlineKeyboardButton]]:
+def kb_chat_nav_rows(locale: str, order_id: int, back_target: str | None = None) -> list[list[InlineKeyboardButton]]:
     back_cb = back_target or f"c:order:{order_id}"
     return [
         [
-            InlineKeyboardButton(text="🏠 Главная", callback_data="c:home"),
-            InlineKeyboardButton(text="🔙 Назад", callback_data=back_cb),
+            InlineKeyboardButton(text=t(locale, "nav.home"), callback_data="c:home"),
+            InlineKeyboardButton(text=t(locale, "nav.back"), callback_data=back_cb),
         ],
     ]
 
@@ -160,7 +162,7 @@ def make_chat_render_fn(db: Database, state: FSMContext):
         messages = await chat.list_messages(order_id, limit=PAGE_SIZE, offset=offset)
 
         text = build_chat_screen_text(order_id, messages, False, business_type)
-        kb = build_chat_screen_kb(order_id, page, total_pages, "c", kb_chat_nav_rows(order_id, back_target))
+        kb = build_chat_screen_kb(order_id, page, total_pages, "c", kb_chat_nav_rows(locale, order_id, back_target))
         return text, kb
 
     return render
@@ -174,12 +176,12 @@ async def list_orders(cq: CallbackQuery, db: Database, state: FSMContext):
     orders = OrdersRepo(db)
     rows = await orders.list_for_client(cq.from_user.id)
     if not rows:
-        await cq.message.edit_text("Заказов пока нет.", reply_markup=kb_client_main())
+        await cq.message.edit_text(t(locale, "orders.empty"), reply_markup=kb_client_main(locale))
         await cq.answer()
         return
 
     order_ids = [int(r["id"]) for r in rows]
-    await cq.message.edit_text("Ваши заказы:", reply_markup=kb_orders_list(order_ids))
+    await cq.message.edit_text(t(locale, "orders.title"), reply_markup=kb_orders_list(locale, order_ids))
     await cq.answer()
 
 
@@ -191,17 +193,17 @@ async def list_history(cq: CallbackQuery, db: Database, state: FSMContext):
     orders = OrdersRepo(db)
     rows = await orders.list_for_client(cq.from_user.id, statuses=DONE_STATUSES)
     if not rows:
-        await cq.message.edit_text("История заказов пуста.", reply_markup=kb_back("order_menu"))
+        await cq.message.edit_text(t(locale, "orders.history.empty"), reply_markup=kb_back(locale, "order_menu"))
         await cq.answer()
         return
 
     order_ids = [int(r["id"]) for r in rows]
-    await cq.message.edit_text("История заказов:", reply_markup=kb_orders_list(order_ids, back_target="order_menu"))
+    await cq.message.edit_text(t(locale, "orders.history.title"), reply_markup=kb_orders_list(locale, order_ids, back_target="order_menu"))
     await cq.answer()
 
 
 @router.callback_query(F.data.startswith("c:order:"))
-async def order_card(cq: CallbackQuery, db: Database, state: FSMContext):
+async def order_card(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
     order_id = int(cq.data.split(":")[2])
     await state.update_data(user_id=cq.from_user.id)
@@ -218,11 +220,11 @@ async def order_card(cq: CallbackQuery, db: Database, state: FSMContext):
                 state=state,
                 db=db,
                 bot_kind="client",
-                text="Заказ не найден.",
-                reply_markup=kb_client_main(),
+                text=t(locale, "order.not_found"),
+                reply_markup=kb_client_main(locale),
             )
         else:
-            await cq.message.edit_text("Заказ не найден.", reply_markup=kb_client_main())
+            await cq.message.edit_text(t(locale, "order.not_found"), reply_markup=kb_client_main(locale))
         await cq.answer()
         return
 
@@ -231,12 +233,12 @@ async def order_card(cq: CallbackQuery, db: Database, state: FSMContext):
     shop_info = await shop.get(int(o["shop_id"]))
     shop_name = shop_info["name"] if shop_info else f"#{o['shop_id']}"
 
-    await _render_order_card(cq, state, db, o, items, shop_name)
+    await _render_order_card(cq, state, db, locale, o, items, shop_name)
     await cq.answer()
 
 
 @router.callback_query(F.data.startswith("c:cancel:"))
-async def cancel_order(cq: CallbackQuery, db: Database, state: FSMContext):
+async def cancel_order(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
     order_id = int(cq.data.split(":")[2])
     orders = OrdersRepo(db)
@@ -251,22 +253,22 @@ async def cancel_order(cq: CallbackQuery, db: Database, state: FSMContext):
                 state=state,
                 db=db,
                 bot_kind="client",
-                text="Заказ не найден.",
-                reply_markup=kb_client_main(),
+                text=t(locale, "order.not_found"),
+                reply_markup=kb_client_main(locale),
             )
         else:
-            await cq.message.edit_text("Заказ не найден.", reply_markup=kb_client_main())
+            await cq.message.edit_text(t(locale, "order.not_found"), reply_markup=kb_client_main(locale))
         await cq.answer()
         return
 
     now = datetime.utcnow()
     created_at = _parse_created_at(o.get("created_at"))
     if o.get("status") == "canceled":
-        await cq.answer("Заказ уже отменён.", show_alert=True)
+        await cq.answer(t(locale, "order.cancel.already"), show_alert=True)
     elif o.get("status") not in CANCELABLE_STATUSES:
-        await cq.answer("Отмена недоступна, заказ уже в обработке.", show_alert=True)
+        await cq.answer(t(locale, "order.cancel.unavailable"), show_alert=True)
     elif not created_at or now - created_at > timedelta(minutes=CANCEL_WINDOW_MINUTES):
-        await cq.answer("Время для отмены заказа истекло.", show_alert=True)
+        await cq.answer(t(locale, "order.cancel.expired"), show_alert=True)
     else:
         await orders.set_status(order_id, "canceled")
         o["status"] = "canceled"
@@ -274,28 +276,28 @@ async def cancel_order(cq: CallbackQuery, db: Database, state: FSMContext):
             await notify_admins_order_canceled(db, order_id=order_id, shop_id=int(o["shop_id"]))
         except Exception:
             logger.warning("Не удалось отправить уведомление об отмене заказа %s", order_id, exc_info=True)
-        await cq.answer("Заказ отменён.")
+        await cq.answer(t(locale, "order.cancel.success"))
 
     items = await orders.get_order_items(order_id)
     shop = ShopsRepo(db)
     shop_info = await shop.get(int(o["shop_id"]))
     shop_name = shop_info["name"] if shop_info else f"#{o['shop_id']}"
-    await _render_order_card(cq, state, db, o, items, shop_name)
+    await _render_order_card(cq, state, db, locale, o, items, shop_name)
 
 
 @router.callback_query(F.data == "c:chat")
-async def chat_list(cq: CallbackQuery, db: Database, state: FSMContext):
+async def chat_list(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "chat_list", {})
     chats = ChatRepo(db)
     order_ids = await chats.list_order_ids_with_chat(user_id=cq.from_user.id)
     if not order_ids:
-        await cq.message.edit_text("Активных чатов нет.", reply_markup=kb_client_main())
+        await cq.message.edit_text(t(locale, "chat.none"), reply_markup=kb_client_main(locale))
         await cq.answer()
         return
 
-    await cq.message.edit_text("Чаты по заказам:", reply_markup=kb_chat_orders(order_ids, "c"))
+    await cq.message.edit_text(t(locale, "chat.list_title"), reply_markup=kb_chat_orders(locale, order_ids, "c"))
     await cq.answer()
 
 
@@ -305,6 +307,7 @@ async def render_chat(
     order_id: int,
     page: int,
     show_hint: bool,
+    locale: str,
     back_target: str | None = None,
 ) -> None:
     orders = OrdersRepo(db)
@@ -320,14 +323,14 @@ async def render_chat(
     offset = (total_pages - page) * PAGE_SIZE
     messages = await chat.list_messages(order_id, limit=PAGE_SIZE, offset=offset)
 
-    text = build_chat_screen_text(order_id, messages, show_hint, business_type)
-    kb = build_chat_screen_kb(order_id, page, total_pages, "c", kb_chat_nav_rows(order_id, back_target))
+    text = build_chat_screen_text(order_id, messages, show_hint, business_type, locale)
+    kb = build_chat_screen_kb(order_id, page, total_pages, "c", kb_chat_nav_rows(locale, order_id, back_target))
     await cq.message.edit_text(text, reply_markup=kb)
 
 
 @router.callback_query(F.data.startswith("c:chat:"))
 @router.callback_query(F.data.startswith("c:chat:"))
-async def open_chat(cq: CallbackQuery, state: FSMContext, db: Database):
+async def open_chat(cq: CallbackQuery, state: FSMContext, db: Database, locale: str = "ru"):
     if is_chat_reminder_text(cq.message.text if cq.message else None):
         # Для напоминания сначала удаляем сообщение.
         await safe_delete_cq_message(cq)
@@ -340,7 +343,7 @@ async def open_chat(cq: CallbackQuery, state: FSMContext, db: Database):
     orders = OrdersRepo(db)
     o = await orders.get_order(order_id)
     if not o or int(o["client_user_id"]) != cq.from_user.id:
-        await cq.message.edit_text("Чат не найден.", reply_markup=kb_client_main())
+        await cq.message.edit_text(t(locale, "chat.not_found"), reply_markup=kb_client_main(locale))
         await cq.answer()
         return
 
@@ -375,14 +378,14 @@ async def open_chat(cq: CallbackQuery, state: FSMContext, db: Database):
 
 @router.callback_query(F.data.startswith("c:chatp:"))
 @router.callback_query(F.data.startswith("c:chatp:"))
-async def paginate_chat(cq: CallbackQuery, state: FSMContext, db: Database):
+async def paginate_chat(cq: CallbackQuery, state: FSMContext, db: Database, locale: str = "ru"):
     order_id = int(cq.data.split(":")[2])
     page = int(cq.data.split(":")[3])
 
     orders = OrdersRepo(db)
     o = await orders.get_order(order_id)
     if not o or int(o["client_user_id"]) != cq.from_user.id:
-        await cq.answer("Чат недоступен.", show_alert=True)
+        await cq.answer(t(locale, "chat.unavailable"), show_alert=True)
         return
 
     data = await state.get_data()
@@ -408,10 +411,10 @@ async def paginate_chat(cq: CallbackQuery, state: FSMContext, db: Database):
 
 
 @router.message(ClientChatStates.active)
-async def send_chat_message(message: Message, state: FSMContext, db: Database):
+async def send_chat_message(message: Message, state: FSMContext, db: Database, locale: str = "ru"):
     text = (message.text or "").strip()
     if not text:
-        await message.answer("Введите сообщение текстом.")
+        await message.answer(t(locale, "chat.send_prompt"))
         return
 
     data = await state.get_data()
@@ -419,7 +422,7 @@ async def send_chat_message(message: Message, state: FSMContext, db: Database):
     orders = OrdersRepo(db)
     o = await orders.get_order(order_id)
     if not o or int(o["client_user_id"]) != message.from_user.id:
-        await message.answer("Чат недоступен.")
+        await message.answer(t(locale, "chat.unavailable"))
         return
 
     chat = ChatRepo(db)

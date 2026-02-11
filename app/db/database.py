@@ -76,6 +76,7 @@ class Database:
 
         # categories: нормализованное имя для поиска/дедупликации
         await add_column("categories", "name_norm", "name_norm TEXT DEFAULT ''")
+        await add_column("categories", "business_type", "business_type TEXT DEFAULT 'shop'")
 
         # products: поля под поиск и импорт
         await add_column("products", "name_norm", "name_norm TEXT DEFAULT ''")
@@ -87,6 +88,7 @@ class Database:
 
         # orders: комментарий клиента
         await add_column("orders", "comment", "comment TEXT DEFAULT ''")
+        await add_column("client_profiles", "locale", "locale TEXT DEFAULT 'ru'")
 
         await connection.execute(
             """
@@ -94,7 +96,8 @@ class Database:
                 user_id INTEGER PRIMARY KEY,
                 full_name TEXT DEFAULT '',
                 phone TEXT DEFAULT '',
-                address TEXT DEFAULT ''
+                address TEXT DEFAULT '',
+                locale TEXT DEFAULT 'ru'
             )
             """
         )

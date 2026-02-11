@@ -13,10 +13,10 @@ router = Router()
 
 
 @router.message(CommandStart())
-async def start_cmd(message: Message, state: FSMContext, db: Database):
+async def start_cmd(message: Message, state: FSMContext, db: Database, locale: str = "ru"):
     await clear_state_keep_screen(state, db, "client", message.chat.id)
     await remember_client_screen(state, "main", {})
-    await state.update_data(user_id=message.from_user.id)
+    await state.update_data(user_id=message.from_user.id, locale=locale)
 
     controller = ChatScreenController(
         bot=message.bot,

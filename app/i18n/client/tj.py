@@ -165,6 +165,20 @@ TEXTS: dict[str, str] = {
     "inline.price": "Нарх: {price}",
     "inline.product_fallback": "Маҳсулот",
 
+    "checkout.comment_prompt": "Шарҳро ба фармоиш бо матни оддӣ нависед:",
+    "checkout.comment": "✏️ Иловаи шарҳ",
+    "order.cancel": "❌ Бекор кардани фармоиш",
+    "order.comment": "Шарҳ: {comment}",
+    "order.cancel.already": "Фармоиш аллакай бекор шудааст.",
+    "order.cancel.unavailable": "Бекоркунӣ дастнорас аст, фармоиш аллакай дар коркард аст.",
+    "order.cancel.expired": "Вақти бекоркунии фармоиш гузашт.",
+    "order.cancel.success": "Фармоиш бекор шуд.",
+    "notif.center": "🔔 Огоҳӣ\n\n💬 Паёмҳои нав: {unread_orders}",
+    "notif.messages": "💬 Паёмҳо",
+    "notif.return": "↩️ Бозгашт",
+    "notif.new_suffix": "нав",
+    "notif.order_item": "💬 Фармоиш #{order_id} · {unread_count} {suffix}",
+
     # Fallback
     "msg.unknown_command": "Фармонро нафаҳмидам. Аз менюи поён истифода баред.",
 }

@@ -6,6 +6,8 @@ from typing import Sequence
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from app.i18n.client.translator import t
+
 CLIENT_INDENT = " " * 8
 PAGE_SIZE = 6
 _client_hint_shown: dict[int, set[int]] = {}
@@ -31,15 +33,16 @@ def build_chat_screen_text(
     messages: Sequence[dict],
     show_hint: bool,
     business_type: str,
+    locale: str = "ru",
 ) -> str:
-    lines: list[str] = [f"💬 Чат по заказу #{order_id}", ""]
+    lines: list[str] = [t(locale, "chat.title", order_id=order_id), ""]
     if show_hint:
-        lines.append("ℹ️ Просто напишите сообщение в поле ниже и отправьте.")
-    lines.append("────────────────────────")
+        lines.append(t(locale, "chat.hint"))
+    lines.append(t(locale, "chat.separator"))
 
     if not messages:
         lines.append("")
-        lines.append("Пока сообщений нет.")
+        lines.append(t(locale, "chat.no_messages"))
         return "\n".join(lines)
 
     lines.append("")
@@ -48,14 +51,14 @@ def build_chat_screen_text(
         indent = CLIENT_INDENT if is_client else ""
         if is_client:
             icon = "🟢"
-            role = "Клиент"
+            role = t(locale, "chat.role.client")
         else:
             if business_type == "restaurant":
                 icon = "🧑‍🍳"
-                role = "Ресторан"
+                role = t(locale, "chat.role.restaurant")
             else:
                 icon = "🛒"
-                role = "Магазин"
+                role = t(locale, "chat.role.shop")
         time_str = _format_time(msg.get("created_at"))
         lines.append(f"{indent}{icon} {role} · {time_str}")
         text = str(msg.get("message_text") or "")

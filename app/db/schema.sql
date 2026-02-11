@@ -27,12 +27,11 @@ CREATE TABLE IF NOT EXISTS shop_admins (
 
 CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    shop_id INTEGER NOT NULL,
+    business_type TEXT CHECK (business_type IN ('shop','restaurant')) NOT NULL,
     name TEXT NOT NULL,
     name_norm TEXT DEFAULT '',
     sort INTEGER DEFAULT 0,
-    is_active INTEGER DEFAULT 1,
-    FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+    is_active INTEGER DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS products (
@@ -88,7 +87,8 @@ CREATE TABLE IF NOT EXISTS client_profiles (
     user_id INTEGER PRIMARY KEY,
     full_name TEXT DEFAULT '',
     phone TEXT DEFAULT '',
-    address TEXT DEFAULT ''
+    address TEXT DEFAULT '',
+    locale TEXT DEFAULT 'ru'
 );
 
 CREATE TABLE IF NOT EXISTS search_synonyms (

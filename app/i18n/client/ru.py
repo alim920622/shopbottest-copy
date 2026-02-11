@@ -165,6 +165,20 @@ TEXTS: dict[str, str] = {
     "inline.price": "Цена: {price}",
     "inline.product_fallback": "Товар",
 
+    "checkout.comment_prompt": "Напишите комментарий к заказу обычным текстом:",
+    "checkout.comment": "✏️ Добавить комментарий",
+    "order.cancel": "❌ Отменить заказ",
+    "order.comment": "Комментарий: {comment}",
+    "order.cancel.already": "Заказ уже отменён.",
+    "order.cancel.unavailable": "Отмена недоступна, заказ уже в обработке.",
+    "order.cancel.expired": "Время для отмены заказа истекло.",
+    "order.cancel.success": "Заказ отменён.",
+    "notif.center": "🔔 Уведомления\n\n💬 Новые сообщения: {unread_orders}",
+    "notif.messages": "💬 Сообщения",
+    "notif.return": "↩️ Вернуться",
+    "notif.new_suffix": "новых",
+    "notif.order_item": "💬 Заказ #{order_id} · {unread_count} {suffix}",
+
     # Fallback
     "msg.unknown_command": "Я не понял команду. Используйте меню ниже.",
 }

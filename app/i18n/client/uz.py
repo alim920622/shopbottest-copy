@@ -165,6 +165,20 @@ TEXTS: dict[str, str] = {
     "inline.price": "Нарх: {price}",
     "inline.product_fallback": "Маҳсулот",
 
+    "checkout.comment_prompt": "Буюртма учун изоҳни оддий матнда ёзинг:",
+    "checkout.comment": "✏️ Изоҳ қўшиш",
+    "order.cancel": "❌ Буюртмани бекор қилиш",
+    "order.comment": "Изоҳ: {comment}",
+    "order.cancel.already": "Буюртма аллақачон бекор қилинган.",
+    "order.cancel.unavailable": "Бекор қилиш мумкин эмас, буюртма ишловда.",
+    "order.cancel.expired": "Буюртмани бекор қилиш вақти тугаган.",
+    "order.cancel.success": "Буюртма бекор қилинди.",
+    "notif.center": "🔔 Билдиришномалар\n\n💬 Янги хабарлар: {unread_orders}",
+    "notif.messages": "💬 Хабарлар",
+    "notif.return": "↩️ Қайтиш",
+    "notif.new_suffix": "янги",
+    "notif.order_item": "💬 Буюртма #{order_id} · {unread_count} {suffix}",
+
     # Fallback
     "msg.unknown_command": "Фармонни тушунмадим. Қуйидаги менюдан фойдаланинг.",
 }
