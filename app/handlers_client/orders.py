@@ -29,6 +29,8 @@ from app.services.screen import clear_state_keep_screen, show_screen
 from app.services.chat_screen_controller import ChatScreenController
 from app.services.client_ui_state import remember_client_screen
 from app.services.notification_center import parse_notif_context, NOTIF_SRC_MSGS
+from app.services.order_chat_access import can_access_order_chat, CLOSED_STATUSES
+from app.handlers_client.catalog import render_cart
 from app.i18n.client.translator import t
 from app.utils.tg_safe import safe_delete_cq_message
 
@@ -43,10 +45,19 @@ class ClientChatStates(StatesGroup):
     active = State()
 
 
-def kb_order_card(locale: str, order_id: int, back_cb: str, can_cancel: bool = False) -> InlineKeyboardMarkup:
-    kb = [
-        [InlineKeyboardButton(text=t(locale, "order_card.chat"), callback_data=f"c:chat:{order_id}")],
-    ]
+def kb_order_card(
+    locale: str,
+    order_id: int,
+    back_cb: str,
+    can_cancel: bool = False,
+    can_chat: bool = True,
+    can_repeat: bool = False,
+) -> InlineKeyboardMarkup:
+    kb = []
+    if can_chat:
+        kb.append([InlineKeyboardButton(text=t(locale, "order_card.chat"), callback_data=f"c:chat:{order_id}")])
+    if can_repeat:
+        kb.append([InlineKeyboardButton(text=t(locale, "order.repeat"), callback_data=f"c:order_repeat:{order_id}")])
     if can_cancel:
         kb.append([InlineKeyboardButton(text=t(locale, "order.cancel"), callback_data=f"c:cancel:{order_id}")])
     kb.append([
@@ -111,7 +122,9 @@ async def _render_order_card(
     back_cb = "c:history" if order["status"] in DONE_STATUSES else "c:orders"
     text = _build_order_text(locale, order, items, shop_name)
     can_cancel = _can_cancel_order(order)
-    reply_markup = kb_order_card(locale, int(order["id"]), back_cb, can_cancel)
+    can_chat = await can_access_order_chat(db, order)
+    can_repeat = str(order.get("status") or "").strip().lower() in CLOSED_STATUSES
+    reply_markup = kb_order_card(locale, int(order["id"]), back_cb, can_cancel, can_chat, can_repeat)
     if is_chat_reminder_text(cq.message.text if cq.message else None):
         # Для напоминания сначала удаляем сообщение, потом показываем карточку.
         await safe_delete_cq_message(cq)
@@ -347,6 +360,9 @@ async def open_chat(cq: CallbackQuery, state: FSMContext, db: Database, locale: 
         await cq.message.edit_text(t(locale, "chat.not_found"), reply_markup=kb_client_main(locale))
         await cq.answer()
         return
+    if not await can_access_order_chat(db, o):
+        await cq.answer(t(locale, "chat.closed"), show_alert=True)
+        return
 
     await cancel_chat_reminder(db, order_id, cq.from_user.id, "client")
     await state.set_state(ClientChatStates.active)
@@ -388,6 +404,9 @@ async def paginate_chat(cq: CallbackQuery, state: FSMContext, db: Database, loca
     if not o or int(o["client_user_id"]) != cq.from_user.id:
         await cq.answer(t(locale, "chat.unavailable"), show_alert=True)
         return
+    if not await can_access_order_chat(db, o):
+        await cq.answer(t(locale, "chat.closed"), show_alert=True)
+        return
 
     data = await state.get_data()
     back_target = data.get("chat_back_target")
@@ -425,6 +444,9 @@ async def send_chat_message(message: Message, state: FSMContext, db: Database, l
     if not o or int(o["client_user_id"]) != message.from_user.id:
         await message.answer(t(locale, "chat.unavailable"))
         return
+    if not await can_access_order_chat(db, o):
+        await message.answer(t(locale, "chat.closed"))
+        return
 
     chat = ChatRepo(db)
     await chat.add_message(order_id, message.from_user.id, "client", text)
@@ -461,3 +483,44 @@ async def send_chat_message(message: Message, state: FSMContext, db: Database, l
         bot_kind="client",
     )
     await controller.refresh_after_user_message(message)
+
+
+@router.callback_query(F.data.startswith("c:order_repeat:"))
+async def repeat_order(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
+    await clear_state_keep_screen(state, db, "client", cq.from_user.id)
+    order_id = int(cq.data.split(":")[2])
+    orders = OrdersRepo(db)
+    order = await orders.get_order(order_id)
+    if not order or int(order.get("client_user_id") or 0) != cq.from_user.id:
+        await cq.answer(t(locale, "common.no_access"), show_alert=True)
+        return
+
+    if str(order.get("status") or "").strip().lower() not in CLOSED_STATUSES:
+        await cq.answer(t(locale, "order.repeat.unavailable"), show_alert=True)
+        return
+
+    result = await orders.repeat_order_to_cart(order_id, cq.from_user.id)
+    shop = ShopsRepo(db)
+    shop_info = await shop.get(int(result["shop_id"]))
+    business_type = shop_info["business_type"] if shop_info else None
+    await state.update_data(cart_kind=business_type)
+
+    lines = [t(locale, "order.repeat.added", count=result["added_count"])]
+    if result["skipped_names"]:
+        lines.append(t(locale, "order.repeat.skipped", names=", ".join(result["skipped_names"])))
+    await cq.answer("\n".join(lines), show_alert=True)
+
+    await state.update_data(user_id=cq.from_user.id, cart_kind=business_type, cart_back_target="order_menu")
+    await remember_client_screen(
+        state,
+        "cart",
+        {"business_type": business_type, "back_target": "order_menu"},
+    )
+    await render_cart(
+        cq.message,
+        cq.from_user.id,
+        db,
+        business_type=business_type,
+        back_target="order_menu",
+        locale=locale,
+    )

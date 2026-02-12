@@ -33,6 +33,7 @@ from app.repositories.products_repo import ProductsRepo
 from app.repositories.shops_repo import ShopsRepo
 from app.services.chat_ui import PAGE_SIZE, build_chat_screen_kb, build_chat_screen_text, calc_total_pages
 from app.services.notification_center import build_client_center_payload, build_client_messages_payload
+from app.services.order_chat_access import can_access_order_chat, CLOSED_STATUSES
 
 
 async def _render_main(locale: str) -> tuple[str, InlineKeyboardMarkup | None]:
@@ -160,7 +161,9 @@ async def render_client_screen(db: Database, state: FSMContext) -> tuple[str, In
         for it in items:
             lines.append(f"- {it['name']} x{it['quantity']} = {it['price_at_moment']}")
         back_cb = "c:history" if order["status"] in DONE_STATUSES else "c:orders"
-        return "\n".join(lines), kb_order_card(locale, order_id, back_cb)
+        can_chat = await can_access_order_chat(db, order)
+        can_repeat = str(order.get("status") or "").strip().lower() in CLOSED_STATUSES
+        return "\n".join(lines), kb_order_card(locale, order_id, back_cb, False, can_chat, can_repeat)
 
     if screen == "chat_list":
         if not user_id:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional, Sequence
 from app.db.database import Database
+from app.repositories.cart_repo import CartRepo
 
 
 class OrdersRepo:
@@ -115,3 +116,42 @@ class OrdersRepo:
             cur = await conn.execute(q, params)
             rows = await cur.fetchall()
             return [dict(r) for r in rows]
+
+    async def repeat_order_to_cart(self, order_id: int, client_user_id: int) -> dict:
+        """Восстанавливает позиции старого заказа в корзину клиента."""
+        order = await self.get_order(order_id)
+        if not order or int(order.get("client_user_id") or 0) != client_user_id:
+            raise PermissionError("Нет доступа к заказу")
+
+        async with self.db.conn() as conn:
+            cur = await conn.execute(
+                """
+                SELECT oi.product_id, oi.quantity, p.name, p.is_active
+                FROM order_items oi
+                LEFT JOIN products p ON p.id = oi.product_id
+                WHERE oi.order_id=?
+                """,
+                (order_id,),
+            )
+            rows = await cur.fetchall()
+
+        cart = CartRepo(self.db)
+        added_count = 0
+        skipped_names: list[str] = []
+
+        for row in rows:
+            product_name = row["name"] if row["name"] else f"ID {row['product_id']}"
+            if row["name"] is None or int(row["is_active"] or 0) != 1:
+                skipped_names.append(product_name)
+                continue
+            qty = int(row["quantity"] or 0)
+            if qty <= 0:
+                continue
+            await cart.add(user_id=client_user_id, product_id=int(row["product_id"]), qty=qty)
+            added_count += qty
+
+        return {
+            "shop_id": int(order["shop_id"]),
+            "added_count": added_count,
+            "skipped_names": skipped_names,
+        }

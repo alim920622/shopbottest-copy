@@ -10,6 +10,7 @@ from app.handlers_admin_shop.utils import get_admin_shop_ids
 from app.repositories.orders_repo import OrdersRepo
 from app.repositories.order_seen_repo import OrderSeenRepo
 from app.services.chat_reminders import is_chat_reminder_text
+from app.services.order_chat_access import can_access_order_chat
 from app.services.screen import clear_state_keep_screen, show_main_menu, show_screen
 from app.services.notification_center import remember_admin_prev_target, parse_notif_context, NOTIF_SRC_ORDERS
 
@@ -43,21 +44,22 @@ def kb_orders_list(order_ids: list[int]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
 
-def kb_order_card(order_id: int) -> InlineKeyboardMarkup:
-    return kb_order_card_with_back(order_id, "a:orders")
+def kb_order_card(order_id: int, can_chat: bool = True) -> InlineKeyboardMarkup:
+    return kb_order_card_with_back(order_id, "a:orders", can_chat)
 
 
-def kb_order_card_with_back(order_id: int, back_target: str) -> InlineKeyboardMarkup:
+def kb_order_card_with_back(order_id: int, back_target: str, can_chat: bool = True) -> InlineKeyboardMarkup:
     kb = [
         [InlineKeyboardButton(text="✅ Готовится", callback_data=f"a:st:{order_id}:preparing")],
         [InlineKeyboardButton(text="📦 Готово", callback_data=f"a:st:{order_id}:ready")],
         [InlineKeyboardButton(text="❌ Отменить", callback_data=f"a:st:{order_id}:canceled")],
-        [InlineKeyboardButton(text="💬 Чат по заказу", callback_data=f"a:chat:{order_id}")],
         [
             InlineKeyboardButton(text="🏠 Главная", callback_data="a:home"),
             InlineKeyboardButton(text="🔙 Назад", callback_data=back_target),
         ],
     ]
+    if can_chat:
+        kb.insert(3, [InlineKeyboardButton(text="💬 Чат по заказу", callback_data=f"a:chat:{order_id}")])
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
 
@@ -84,7 +86,8 @@ async def build_order_card_payload(
     ]
     for it in items:
         lines.append(f"- {it['name']} x{it['quantity']} = {it['price_at_moment']}")
-    return "\n".join(lines), kb_order_card_with_back(order_id, back_target), True
+    can_chat = await can_access_order_chat(db, o)
+    return "\n".join(lines), kb_order_card_with_back(order_id, back_target, can_chat), True
 
 
 async def render_order_card_by_id(cq: CallbackQuery, db: Database, state: FSMContext, order_id: int) -> None:
@@ -213,7 +216,7 @@ async def set_status(cq: CallbackQuery, db: Database, state: FSMContext):
     await safe_edit_text(
         cq.message,
         "\n".join(lines),
-        reply_markup=kb_order_card_with_back(order_id, back_target),
+        reply_markup=kb_order_card_with_back(order_id, back_target, await can_access_order_chat(db, o)),
     )
 
 

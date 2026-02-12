@@ -23,6 +23,7 @@ from app.services.chat_reminders import cancel_chat_reminder, schedule_chat_remi
 from app.services.notification_center import remember_admin_prev_target, parse_notif_context, NOTIF_SRC_MSGS
 from app.services.screen import clear_state_keep_screen, set_screen_message_id, show_screen
 from app.services.chat_screen_controller import ChatScreenController
+from app.services.order_chat_access import can_access_order_chat
 from app.utils.tg_safe import safe_delete_cq_message
 
 router = Router()
@@ -135,6 +136,9 @@ async def open_chat_by_order_id(
         await cq.message.edit_text("Чат недоступен.", reply_markup=kb_admin_main())
         await cq.answer()
         return
+    if not await can_access_order_chat(db, order):
+        await cq.answer("Чат закрыт.", show_alert=True)
+        return
     await cancel_chat_reminder(db, order_id, cq.from_user.id, "admin_shop")
     await state.set_state(AdminShopChatStates.active)
     await state.update_data(chat_order_id=order_id, chat_back_target=back_target)
@@ -188,6 +192,9 @@ async def paginate_chat(cq: CallbackQuery, state: FSMContext, db: Database):
     if not order or int(order["shop_id"]) not in shop_ids:
         await cq.answer("Чат недоступен.", show_alert=True)
         return
+    if not await can_access_order_chat(db, order):
+        await cq.answer("Чат закрыт.", show_alert=True)
+        return
     data = await state.get_data()
     back_target = data.get("chat_back_target") or "a:chat"
     await state.update_data(
@@ -219,6 +226,9 @@ async def send_chat_message(message: Message, state: FSMContext, db: Database):
     shop_ids = await get_admin_shop_ids(db, message.from_user.id)
     if not order or int(order["shop_id"]) not in shop_ids:
         await message.answer("Чат недоступен.")
+        return
+    if not await can_access_order_chat(db, order):
+        await message.answer("Чат закрыт.")
         return
 
     chat = ChatRepo(db)
