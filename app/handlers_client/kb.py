@@ -155,14 +155,54 @@ def kb_checkout_choose_shop(locale: str, shop_ids: list[int]) -> InlineKeyboardM
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
 
-def kb_checkout_confirm(locale: str, confirm_cb: str, back_cb: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=t(locale, "checkout.comment"), callback_data="c:checkout_comment")],
-        [
+def kb_checkout_confirm(
+    locale: str,
+    confirm_cb: str,
+    back_cb: str,
+    business_type: str,
+    selected_fulfillment: str | None,
+    shop_id: int,
+) -> InlineKeyboardMarkup:
+    kb: list[list[InlineKeyboardButton]] = []
+    if business_type == "shop":
+        pickup_text = t(locale, "pickup")
+        if selected_fulfillment == "pickup":
+            pickup_text = f"✅ {pickup_text}"
+        kb.append([
+            InlineKeyboardButton(text=t(locale, "checkout.comment"), callback_data="c:checkout_comment"),
+            InlineKeyboardButton(
+                text=pickup_text,
+                callback_data=f"c:checkout_fulfill:{shop_id}:pickup_toggle",
+            ),
+        ])
+        kb.append([
             InlineKeyboardButton(text=t(locale, "checkout.confirm"), callback_data=confirm_cb),
             InlineKeyboardButton(text=t(locale, "nav.back"), callback_data=back_cb),
-        ]
-    ])
+        ])
+        return InlineKeyboardMarkup(inline_keyboard=kb)
+
+    kb.append([InlineKeyboardButton(text=t(locale, "checkout.comment"), callback_data="c:checkout_comment")])
+    variants = [
+        ("courier", t(locale, "delivery")),
+        ("pickup", t(locale, "pickup")),
+        ("dine_in", t(locale, "dine_in")),
+    ]
+    row: list[InlineKeyboardButton] = []
+    for value, label in variants:
+        text = f"✅ {label}" if selected_fulfillment == value else label
+        row.append(
+            InlineKeyboardButton(
+                text=text,
+                callback_data=f"c:checkout_fulfill:{shop_id}:{value}",
+            )
+        )
+    kb.append(row)
+    if selected_fulfillment:
+        kb.append([
+            InlineKeyboardButton(text=t(locale, "checkout.confirm"), callback_data=confirm_cb),
+            InlineKeyboardButton(text=t(locale, "nav.back"), callback_data=back_cb),
+        ])
+    return InlineKeyboardMarkup(inline_keyboard=kb)
 
 
 def kb_after_order(locale: str) -> InlineKeyboardMarkup:

@@ -172,6 +172,9 @@ TEXTS: dict[str, str] = {
 
     "checkout.comment_prompt": "Буюртма учун изоҳни оддий матнда ёзинг:",
     "checkout.comment": "✏️ Изоҳ қўшиш",
+    "delivery": "🚚 Yetkazib berish",
+    "pickup": "🏬 Olib ketish",
+    "dine_in": "🍽 Zalda",
     "order.cancel": "❌ Буюртмани бекор қилиш",
     "order.comment": "Изоҳ: {comment}",
     "order.cancel.already": "Буюртма аллақачон бекор қилинган.",

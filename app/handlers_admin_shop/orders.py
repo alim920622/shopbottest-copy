@@ -15,6 +15,15 @@ from app.services.notification_center import remember_admin_prev_target, parse_n
 
 router = Router()
 
+def _format_fulfillment_type(value: str | None) -> str:
+    mapping = {
+        "courier": "🚚 Доставка",
+        "pickup": "🏬 Самовывоз",
+        "dine_in": "🍽 В зале",
+    }
+    return mapping.get((value or "").strip(), "🚚 Доставка")
+
+
 
 def kb_back_admin() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -68,6 +77,7 @@ async def build_order_card_payload(
         f"Заказ #{o['id']}",
         f"Статус: {o['status']}",
         f"Сумма: {o['total_amount']}",
+        f"Получение: {_format_fulfillment_type(o.get('fulfillment_type'))}",
         f"Комментарий: {comment_line}",
         "",
         "Состав:",
@@ -191,6 +201,7 @@ async def set_status(cq: CallbackQuery, db: Database, state: FSMContext):
         f"Заказ #{o['id']}",
         f"Статус: {o['status']}",
         f"Сумма: {o['total_amount']}",
+        f"Получение: {_format_fulfillment_type(o.get('fulfillment_type'))}",
         f"Комментарий: {comment_line}",
         "",
         "Состав:",

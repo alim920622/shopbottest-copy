@@ -7,7 +7,7 @@ class OrdersRepo:
     def __init__(self, db: Database):
         self.db = db
 
-    async def create_order_from_cart(self, shop_id: int, client_user_id: int, comment: str = "") -> int:
+    async def create_order_from_cart(self, shop_id: int, client_user_id: int, comment: str = "", fulfillment_type: str = "courier") -> int:
         """
         Создает заказ и позиции из таблицы cart для указанного shop_id.
         Возвращает order_id.
@@ -33,9 +33,9 @@ class OrdersRepo:
                 total += float(r["price"]) * int(r["quantity"])
 
             cur2 = await conn.execute(
-                """INSERT INTO orders (shop_id, client_user_id, status, total_amount, comment, updated_at)
-                   VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
-                (shop_id, client_user_id, "new", total, comment),
+                """INSERT INTO orders (shop_id, client_user_id, status, total_amount, comment, fulfillment_type, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                (shop_id, client_user_id, "new", total, comment, fulfillment_type),
             )
             order_id = int(cur2.lastrowid)
 

@@ -9,3 +9,12 @@ rg -n "[А-Яа-яЁё]" app/handlers_client app/services app/ui
 rg -n "InlineKeyboardButton\(text=" app/handlers_client app/services app/ui
 rg -n "\bt\(" app/handlers_client app/services app/ui
 ```
+
+
+## Обновление существующей БД
+
+Для уже созданной базы нужно добавить колонку способа получения заказа:
+
+```sql
+ALTER TABLE orders ADD COLUMN fulfillment_type TEXT NOT NULL DEFAULT 'courier';
+```

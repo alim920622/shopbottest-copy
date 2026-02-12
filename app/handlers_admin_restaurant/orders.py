@@ -14,6 +14,15 @@ from app.utils.tg_safe import safe_delete_cq_message
 
 router = Router()
 
+def _format_fulfillment_type(value: str | None) -> str:
+    mapping = {
+        "courier": "🚚 Доставка",
+        "pickup": "🏬 Самовывоз",
+        "dine_in": "🍽 В зале",
+    }
+    return mapping.get((value or "").strip(), "🚚 Доставка")
+
+
 CURRENT = ["new", "preparing", "on_the_way"]
 DONE = ["finished", "canceled"]
 
@@ -76,6 +85,7 @@ async def build_order_card_payload(
         f"Заказ #{o['id']}",
         f"Статус: {o['status']}",
         f"Сумма: {o['total_amount']}",
+        f"Получение: {_format_fulfillment_type(o.get('fulfillment_type'))}",
         f"Комментарий: {comment_line}",
         "",
         "Состав:",

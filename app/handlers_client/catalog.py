@@ -783,7 +783,7 @@ async def checkout(cq: CallbackQuery, db: Database, state: FSMContext, locale: s
         return
 
     shop_ids = sorted({int(i["shop_id"]) for i in items})
-    await state.update_data(checkout_shop_ids=shop_ids, order_comment="")
+    await state.update_data(checkout_shop_ids=shop_ids, order_comment="", fulfillment_type=None)
     if len(shop_ids) == 1:
         await _render_checkout_confirm(cq, db, state, locale, shop_ids[0], back_cb="c:back:cart")
         return
@@ -820,7 +820,64 @@ async def checkout_back(cq: CallbackQuery, state: FSMContext, locale: str = "ru"
 @router.callback_query(F.data.startswith("c:checkout_confirm:"))
 async def checkout_confirm(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     shop_id = int(cq.data.split(":")[2])
+    shop = await ShopsRepo(db).get(shop_id)
+    if not shop:
+        await cq.answer(t(locale, "shop.not_found"), show_alert=True)
+        return
+
+    data = await state.get_data()
+    fulfillment_type = data.get("fulfillment_type")
+    if shop.get("business_type") == "restaurant" and not fulfillment_type:
+        await cq.answer("Выберите способ получения", show_alert=True)
+        return
+
     await _create_order_for_shop(cq, db, state, shop_id, locale=locale)
+
+
+@router.callback_query(F.data.startswith("c:checkout_fulfill:"))
+async def checkout_pick_fulfillment(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
+    _, _, shop_id_str, requested = cq.data.split(":", 3)
+    shop_id = int(shop_id_str)
+    shop = await ShopsRepo(db).get(shop_id)
+    if not shop:
+        await cq.answer(t(locale, "shop.not_found"), show_alert=True)
+        return
+
+    business_type = shop.get("business_type")
+    data = await state.get_data()
+    selected = data.get("fulfillment_type")
+    allowed_values = {"courier", "pickup", "dine_in"}
+
+    if business_type == "shop":
+        if requested != "pickup_toggle":
+            await cq.answer()
+            return
+        new_value = "pickup" if selected != "pickup" else "courier"
+    else:
+        if requested not in allowed_values:
+            await cq.answer()
+            return
+        if requested == "dine_in" and business_type != "restaurant":
+            await cq.answer()
+            return
+        new_value = requested
+
+    if business_type == "shop" and new_value == "dine_in":
+        await cq.answer()
+        return
+
+    await state.update_data(fulfillment_type=new_value)
+    back_cb = data.get("checkout_confirm_back_cb") or "c:back:cart"
+    text, reply_markup = await _build_checkout_confirm_payload(
+        db=db,
+        state=state,
+        user_id=cq.from_user.id,
+        locale=locale,
+        shop_id=shop_id,
+        back_cb=back_cb,
+    )
+    await cq.message.edit_text(text, reply_markup=reply_markup)
+    await cq.answer()
 
 
 @router.callback_query(F.data == "c:checkout_comment")
@@ -839,9 +896,20 @@ async def _render_checkout_confirm(
     shop_id: int,
     back_cb: str,
 ):
+    shop = await ShopsRepo(db).get(shop_id)
+    business_type = shop.get("business_type") if shop else "shop"
+    data = await state.get_data()
+    default_fulfillment = data.get("fulfillment_type")
+    if business_type == "shop":
+        if default_fulfillment not in {"courier", "pickup"}:
+            default_fulfillment = "courier"
+    elif business_type == "restaurant" and default_fulfillment not in {"courier", "pickup", "dine_in"}:
+        default_fulfillment = None
+
     await state.update_data(
         checkout_confirm_shop_id=shop_id,
         checkout_confirm_back_cb=back_cb,
+        fulfillment_type=default_fulfillment,
     )
     text, reply_markup = await _build_checkout_confirm_payload(
         db=db,
@@ -870,6 +938,12 @@ async def _build_checkout_confirm_payload(
     if not shop_items:
         return t(locale, "cart.empty_for_shop"), kb_back(locale, "cart_menu")
     total = sum(float(i["price"]) * int(i["quantity"]) for i in shop_items)
+    shop = await ShopsRepo(db).get(shop_id)
+    business_type = shop.get("business_type") if shop else "shop"
+    selected_fulfillment = data.get("fulfillment_type")
+    if business_type == "shop" and selected_fulfillment not in {"courier", "pickup"}:
+        selected_fulfillment = "courier"
+
     lines = [t(locale, "checkout.confirm_title")]
     for i in shop_items:
         line_total = float(i["price"]) * int(i["quantity"])
@@ -881,9 +955,13 @@ async def _build_checkout_confirm_payload(
 
     return (
         "\n".join(lines),
-        kb_checkout_confirm(locale, 
+        kb_checkout_confirm(
+            locale,
             confirm_cb=f"c:checkout_confirm:{shop_id}",
             back_cb=back_cb,
+            business_type=business_type,
+            selected_fulfillment=selected_fulfillment,
+            shop_id=shop_id,
         ),
     )
 
@@ -934,6 +1012,22 @@ async def _create_order_for_shop(cq: CallbackQuery, db: Database, state: FSMCont
     orders = OrdersRepo(db)
     data = await state.get_data()
     comment = (data.get("order_comment") or "").strip()
+    shop = await ShopsRepo(db).get(shop_id)
+    if not shop:
+        await cq.answer(t(locale, "shop.not_found"), show_alert=True)
+        return
+
+    business_type = shop.get("business_type")
+    fulfillment_type = data.get("fulfillment_type")
+    if business_type == "shop":
+        if fulfillment_type not in {"courier", "pickup"}:
+            fulfillment_type = "courier"
+    elif business_type == "restaurant":
+        if fulfillment_type not in {"courier", "pickup", "dine_in"}:
+            await cq.answer("Выберите способ получения", show_alert=True)
+            return
+    else:
+        fulfillment_type = "courier"
 
     # 1) создаём заказ
     try:
@@ -941,6 +1035,7 @@ async def _create_order_for_shop(cq: CallbackQuery, db: Database, state: FSMCont
             shop_id=shop_id,
             client_user_id=cq.from_user.id,
             comment=comment,
+            fulfillment_type=fulfillment_type,
         )
     except ValueError:
         await cq.message.edit_text(
@@ -965,5 +1060,6 @@ async def _create_order_for_shop(cq: CallbackQuery, db: Database, state: FSMCont
         order_comment="",
         checkout_confirm_shop_id=None,
         checkout_confirm_back_cb=None,
+        fulfillment_type=None,
     )
     await cq.answer()

@@ -171,6 +171,9 @@ TEXTS: dict[str, str] = {
 
     "checkout.comment_prompt": "Напишите комментарий к заказу обычным текстом:",
     "checkout.comment": "✏️ Добавить комментарий",
+    "delivery": "🚚 Доставка",
+    "pickup": "🏬 Самовывоз",
+    "dine_in": "🍽 В зале",
     "order.cancel": "❌ Отменить заказ",
     "order.comment": "Комментарий: {comment}",
     "order.cancel.already": "Заказ уже отменён.",
