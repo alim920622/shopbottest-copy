@@ -22,8 +22,8 @@ TEXTS: dict[str, str] = {
 
     # Ҷустуҷӯ
     "search.open_inline": "🔎 Inline-ро кушодан",
-    "search.search": "🔎 Ҷустуҷӯ",
-    "search.at_search": "🔎 @Ҷустуҷӯ",
+    "search.search": "🔎 Ҷустуҷӯ (Поиск)",
+    "search.at_search": "🔎 @Ҷустуҷӯ (@Поиск)",
 
     # Корти маҳсулот
     "product.add_to_cart": "➕ Ба сабад илова кардан",
@@ -98,7 +98,7 @@ TEXTS: dict[str, str] = {
     "checkout.multiple_shops": "Дар сабад маҳсулот аз мағозаҳо/тарабхонаҳои гуногун аст. Барои кадом нуқта фармоиш диҳем?",
     "checkout.confirm_title": "Фармоишро тасдиқ кунед:",
     "checkout.create_failed": "Фармоиш сохта нашуд: сабад холӣ аст ё барои ин нуқта аллакай фармоиш мавҷуд аст.",
-    "checkout.created": "✅ Фармоиш муваффақона сохта шуд!\nРақами фармоиш: {order_id}\nҲолат: {status}",
+    "checkout.created": "✅ Фармоиш муваффақона сохта шуд!\nРақами фармоиш: {order_id}\nСтатус: {status}",
 
     # Фармоишҳо
     "orders.history.empty": "Таърихи фармоишҳо холӣ аст.",
@@ -107,9 +107,13 @@ TEXTS: dict[str, str] = {
     "orders.title": "Фармоишҳои шумо:",
     "order.not_found": "Фармоиш ёфт нашуд.",
     "order.shop": "Нуқта: {shop_name}",
-    "order.status": "Ҳолат: {status}",
+    "order.status": "Статус: {status}",
     "order.total": "Ҳамагӣ: {total}",
     "order.items_title": "Таркиб:",
+
+    # Изоххо
+    "checkout.comment_label": "📝 Шарҳ:",
+    "checkout.comment_empty": "- илова нашудааст...",
 
     # Чатҳо
     "chat.none": "Чатҳои фаъол нестанд.",

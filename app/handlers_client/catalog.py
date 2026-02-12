@@ -1,6 +1,8 @@
 import logging
 import re
 from aiogram import Router, F
+router = Router()
+logger = logging.getLogger(__name__)
 from aiogram.types import CallbackQuery, Message
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.state import StatesGroup, State
@@ -155,7 +157,7 @@ async def list_shops(cq: CallbackQuery, db: Database, state: FSMContext, locale:
 
 
 @router.callback_query(F.data == "c:home")
-async def client_home(cq: CallbackQuery, db: Database, state: FSMContext):
+async def client_home(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "main", {})
@@ -176,7 +178,7 @@ async def client_home(cq: CallbackQuery, db: Database, state: FSMContext):
     await cq.answer()
 
 @router.callback_query(F.data == "c:order_menu")
-async def order_menu(cq: CallbackQuery, db: Database, state: FSMContext):
+async def order_menu(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "order_menu", {})
@@ -184,7 +186,7 @@ async def order_menu(cq: CallbackQuery, db: Database, state: FSMContext):
     await cq.answer()
 
 @router.callback_query(F.data == "c:cart_menu")
-async def cart_menu(cq: CallbackQuery, state: FSMContext):
+async def cart_menu(cq: CallbackQuery, state: FSMContext, locale: str = "ru"):
     await state.update_data(last_view={"name": "cart_menu"})
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "cart_menu", {})
@@ -221,19 +223,27 @@ async def pick_shop(cq: CallbackQuery, db: Database, state: FSMContext, locale: 
     )
     await remember_client_screen(state, "categories", {"kind": kind, "shop_id": shop_id})
 
-    await show_categories(cq.message, db, kind, shop_id)
+    await show_categories(cq.message, db, kind, shop_id, locale=locale)
     await cq.answer()
 
 
-async def show_categories(message: Message, db: Database, kind: str, shop_id: int):
+async def show_categories(message: Message, db: Database, kind: str, shop_id: int, locale: str = "ru"):
+    logger.warning("DEBUG show_categories locale=%r kind=%r shop_id=%r", locale, kind, shop_id)
     cats = CategoriesRepo(db)
     categories = await cats.list_for_shop(shop_id, active_only=True)
     if not categories:
         await message.edit_text(t(locale, "categories.empty"), reply_markup=kb_back(locale, f"{kind}_list"))
         return
 
-    title = "Категории магазина:" if kind == "shop" else "Категории ресторана:"
-    await message.edit_text(title, reply_markup=kb_categories_list(locale, categories, kind, shop_id))
+    title = (
+        t(locale, "categories.shop_title")
+        if kind == "shop"
+        else t(locale, "categories.restaurant_title")
+    )
+    await message.edit_text(
+        title,
+        reply_markup=kb_categories_list(locale, categories, kind, shop_id),
+    )
 
 
 @router.callback_query(F.data.startswith("c:cat:"))
@@ -243,7 +253,14 @@ async def open_category(cq: CallbackQuery, db: Database, state: FSMContext, loca
     shop_id = int(shop_id_str)
     category_id = int(category_id_str)
 
-    await show_category_products(cq.message, db, state, shop_id, category_id, locale)
+    await show_category_products(
+        cq.message,
+        db,
+        state,
+        shop_id,
+        category_id,
+        locale=locale,
+    )
     await cq.answer()
 
 
@@ -347,7 +364,7 @@ async def open_product(cq: CallbackQuery, db: Database, state: FSMContext, local
 
 
 @router.callback_query(F.data.startswith("c:prodsku:"))
-async def open_product_by_sku(cq: CallbackQuery, db: Database, state: FSMContext):
+async def open_product_by_sku(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     # c:prodsku:{shop_id}:{sku}
     _, _, shop_id_str, sku = cq.data.split(":", 3)
     shop_id = int(shop_id_str)
@@ -378,7 +395,7 @@ async def open_product_by_sku(cq: CallbackQuery, db: Database, state: FSMContext
 
 
 @router.callback_query(F.data.startswith("c:addsku:"))
-async def add_to_cart_by_sku(cq: CallbackQuery, db: Database):
+async def add_to_cart_by_sku(cq: CallbackQuery, db: Database, locale: str = "ru"):
     # c:addsku:{shop_id}:{sku}
     _, _, shop_id_str, sku = cq.data.split(":", 3)
     shop_id = int(shop_id_str)
@@ -399,7 +416,7 @@ async def add_to_cart_by_sku(cq: CallbackQuery, db: Database):
     await cq.answer(t(locale, "cart.added"))
 
 @router.callback_query(F.data.startswith("c:add:"))
-async def add_to_cart(cq: CallbackQuery, db: Database):
+async def add_to_cart(cq: CallbackQuery, db: Database, locale: str = "ru"):
     # c:add:{product_id}
     product_id = int(cq.data.split(":")[2])
 
@@ -416,7 +433,7 @@ async def add_to_cart(cq: CallbackQuery, db: Database):
 
 
 @router.callback_query(F.data.startswith("c:pickback:"))
-async def back_to_categories(cq: CallbackQuery, db: Database):
+async def back_to_categories(cq: CallbackQuery, db: Database, locale: str = "ru"):
     # c:pickback:{shop_id}
     shop_id = int(cq.data.split(":")[2])
 
@@ -435,13 +452,21 @@ async def back_to_categories(cq: CallbackQuery, db: Database):
         await cq.answer()
         return
 
-    title = "Категории магазина:" if shop["business_type"] == "shop" else "Категории ресторана:"
-    await cq.message.edit_text(title, reply_markup=kb_categories_list(locale, categories, shop["business_type"], shop_id))
+    bt = shop["business_type"]
+    title = (
+        t(locale, "categories.shop_title")
+        if bt == "shop"
+        else t(locale, "categories.restaurant_title")
+    )
+    await cq.message.edit_text(
+        title,
+        reply_markup=kb_categories_list(locale, categories, bt, shop_id),
+    )
     await cq.answer()
 
 
 @router.callback_query(F.data.startswith("c:back:"))
-async def back(cq: CallbackQuery, db: Database, state: FSMContext):
+async def back(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     parts = cq.data.split(":")
     target = parts[2] if len(parts) > 2 else ""
     data = await state.get_data()
@@ -475,6 +500,7 @@ async def back(cq: CallbackQuery, db: Database, state: FSMContext):
                 db,
                 return_view.get("kind"),
                 return_view.get("shop_id"),
+                locale=locale,
             )
             await cq.answer()
             return
@@ -523,7 +549,7 @@ async def back(cq: CallbackQuery, db: Database, state: FSMContext):
         if len(parts) >= 5:
             kind = parts[3]
             shop_id = int(parts[4])
-            await show_categories(cq.message, db, kind, shop_id)
+            await show_categories(cq.message, db, kind, shop_id, locale=locale)
             await cq.answer()
             return
 
@@ -561,18 +587,20 @@ async def render_cart(
         await message.edit_text(t(locale, "cart.empty"), reply_markup=kb_cart_empty(locale, back_target))
         return
 
-    cart_title = "🧺 Корзина"
     if business_type == "shop":
-        cart_title = "🧺 Корзина магазинов"
-    if business_type == "restaurant":
-        cart_title = "🧺 Корзина ресторанов"
+        cart_title = t(locale, "cart.title.shop")
+    elif business_type == "restaurant":
+        cart_title = t(locale, "cart.title.restaurant")
+    else:
+        cart_title = t(locale, "cart.title.default")
+
 
     total = sum(float(i["price"]) * int(i["quantity"]) for i in items)
     text_lines = [f"{cart_title}:"]
     for i in items:
         line_total = float(i["price"]) * int(i["quantity"])
         text_lines.append(f"- {i['name']} x{i['quantity']} = {line_total}")
-    text_lines.append(f"\nИтого: {total}")
+    text_lines.append("\n" + t(locale, "cart.total", total=total))
 
     await message.edit_text("\n".join(text_lines), reply_markup=kb_cart(locale, items, back_target))
 
@@ -757,7 +785,7 @@ async def checkout(cq: CallbackQuery, db: Database, state: FSMContext, locale: s
     shop_ids = sorted({int(i["shop_id"]) for i in items})
     await state.update_data(checkout_shop_ids=shop_ids, order_comment="")
     if len(shop_ids) == 1:
-        await _render_checkout_confirm(cq, db, state, shop_ids[0], back_cb="c:back:cart")
+        await _render_checkout_confirm(cq, db, state, locale, shop_ids[0], back_cb="c:back:cart")
         return
 
     # если в корзине товары из разных точек — выбрать
@@ -771,11 +799,11 @@ async def checkout(cq: CallbackQuery, db: Database, state: FSMContext, locale: s
 @router.callback_query(F.data.startswith("c:checkout_shop:"))
 async def checkout_pick_shop(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     shop_id = int(cq.data.split(":")[2])
-    await _render_checkout_confirm(cq, db, state, shop_id, back_cb="c:checkout_back")
+    await _render_checkout_confirm(cq, db, state, locale, shop_id, back_cb="c:checkout_back")
 
 
 @router.callback_query(F.data == "c:checkout_back")
-async def checkout_back(cq: CallbackQuery, state: FSMContext):
+async def checkout_back(cq: CallbackQuery, state: FSMContext, locale: str = "ru"):
     data = await state.get_data()
     shop_ids = data.get("checkout_shop_ids") or []
     if shop_ids:
@@ -792,7 +820,7 @@ async def checkout_back(cq: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("c:checkout_confirm:"))
 async def checkout_confirm(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     shop_id = int(cq.data.split(":")[2])
-    await _create_order_for_shop(cq, db, state, shop_id)
+    await _create_order_for_shop(cq, db, state, shop_id, locale=locale)
 
 
 @router.callback_query(F.data == "c:checkout_comment")
@@ -807,6 +835,7 @@ async def _render_checkout_confirm(
     cq: CallbackQuery,
     db: Database,
     state: FSMContext,
+    locale: str,
     shop_id: int,
     back_cb: str,
 ):
@@ -818,6 +847,7 @@ async def _render_checkout_confirm(
         db=db,
         state=state,
         user_id=cq.from_user.id,
+        locale=locale,
         shop_id=shop_id,
         back_cb=back_cb,
     )
@@ -829,6 +859,7 @@ async def _build_checkout_confirm_payload(
     db: Database,
     state: FSMContext,
     user_id: int,
+    locale: str,
     shop_id: int,
     back_cb: str,
 ):
@@ -843,10 +874,11 @@ async def _build_checkout_confirm_payload(
     for i in shop_items:
         line_total = float(i["price"]) * int(i["quantity"])
         lines.append(f"- {i['name']} x{i['quantity']} = {line_total}")
-    lines.append(f"\nИтого: {total}")
+    lines.append("\n" + t(locale, "cart.total", total=total))
     comment = (data.get("order_comment") or "").strip()
-    lines.append("📝 Комментарий:")
-    lines.append(comment or "— не добавлен —")
+    lines.append(t(locale, "checkout.comment_label"))
+    lines.append(comment or t(locale, "checkout.comment_empty"))
+
     return (
         "\n".join(lines),
         kb_checkout_confirm(locale, 
@@ -864,7 +896,13 @@ async def save_order_comment(message: Message, state: FSMContext, db: Database, 
     comment = message.text.strip()
     await state.update_data(order_comment=comment)
     await state.set_state(None)
-
+    
+    # ✅ УДАЛЯЕМ сообщение пользователя
+    try:
+        await message.delete()
+    except Exception:
+        pass
+    
     data = await state.get_data()
     shop_id = data.get("checkout_confirm_shop_id")
     back_cb = data.get("checkout_confirm_back_cb") or "c:back:cart"
@@ -876,6 +914,7 @@ async def save_order_comment(message: Message, state: FSMContext, db: Database, 
         db=db,
         state=state,
         user_id=message.from_user.id,
+        locale=locale,
         shop_id=int(shop_id),
         back_cb=back_cb,
     )
@@ -891,7 +930,7 @@ async def save_order_comment(message: Message, state: FSMContext, db: Database, 
         await message.answer(text, reply_markup=reply_markup)
 
 
-async def _create_order_for_shop(cq: CallbackQuery, db: Database, state: FSMContext, shop_id: int):
+async def _create_order_for_shop(cq: CallbackQuery, db: Database, state: FSMContext, shop_id: int, locale: str = "ru"):
     orders = OrdersRepo(db)
     data = await state.get_data()
     comment = (data.get("order_comment") or "").strip()
@@ -919,7 +958,7 @@ async def _create_order_for_shop(cq: CallbackQuery, db: Database, state: FSMCont
 
     # 3) ответ клиенту
     await cq.message.edit_text(
-        f"✅ Заказ успешно создан!\nНомер заказа: {order_id}\nСтатус: new",
+        t(locale, "checkout.created", order_id=order_id, status="new"),
         reply_markup=kb_after_order(locale),
     )
     await state.update_data(

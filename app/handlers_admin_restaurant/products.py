@@ -1,3 +1,4 @@
+from app.config import get_settings
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import StateFilter
@@ -23,8 +24,15 @@ class ProductFSM(StatesGroup):
     edit_name = State()
     edit_price = State()
     edit_desc = State()
+    
+    add_category = State()
+    
 
-
+def is_superadmin(user_id: int) -> bool:
+    s = get_settings()
+    return user_id in set(s.superadmin_ids)
+    
+    
 def nav(home_cb: str, back_cb: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="🏠 Главная", callback_data=home_cb),
@@ -38,18 +46,37 @@ def kb_cancel() -> InlineKeyboardMarkup:
     ])
 
 
-def kb_categories(categories: list[dict], restaurant_id: int) -> InlineKeyboardMarkup:
+def kb_categories(categories: list[dict], restaurant_id: int, user_id: int) -> InlineKeyboardMarkup:
     kb = []
     for c in categories:
         kb.append([InlineKeyboardButton(
             text=c["name"],
             callback_data=f"r:cat:{restaurant_id}:{c['id']}"
         )])
+    if is_superadmin(user_id):
+        kb.append([InlineKeyboardButton(text="➕ Добавить категорию", callback_data="r:addcat")])
+    
     kb.append([
         InlineKeyboardButton(text="🏠 Главная", callback_data="r:home"),
         InlineKeyboardButton(text="🔙 Назад", callback_data="r:back:main"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=kb)
+
+
+def parse_triple_name(text: str) -> tuple[str, str, str] | None:
+    lines = [l.strip() for l in (text or "").splitlines() if l.strip()]
+    data: dict[str, str] = {}
+    for line in lines:
+        if ":" not in line:
+            continue
+        k, v = line.split(":", 1)
+        k = k.strip().lower()
+        v = v.strip()
+        if k in ("ru", "uz", "tj") and v:
+            data[k] = v
+    if "ru" in data and "uz" in data and "tj" in data:
+        return data["ru"], data["uz"], data["tj"]
+    return None
 
 
 def kb_products(products: list[dict], restaurant_id: int, category_id: int) -> InlineKeyboardMarkup:
@@ -444,18 +471,75 @@ async def list_categories(cq: CallbackQuery, db: Database):
 
     restaurant_id = ids[0]  # MVP: первый ресторан админа
     cats = CategoriesRepo(db)
-    categories = await cats.list_for_shop(restaurant_id, active_only=True)
+
+    # ✅ Общие категории для всех ресторанов
+    categories = await cats.list_for_business_type("restaurant", active_only=True)
 
     if not categories:
         await cq.message.edit_text(
-            "В ресторане пока нет категорий (создаёт суперадмин).",
+            "Пока нет общих категорий ресторанов (создаёт суперадмин).",
             reply_markup=nav("r:home", "r:back:main")
         )
         await cq.answer()
         return
 
-    await cq.message.edit_text("Выберите категорию:", reply_markup=kb_categories(categories, restaurant_id))
+    await cq.message.edit_text("Выберите категорию:", reply_markup=kb_categories(categories, restaurant_id, cq.from_user.id))
     await cq.answer()
+
+
+@router.callback_query(F.data == "r:addcat")
+async def add_category_prompt(cq: CallbackQuery, state: FSMContext):
+    if not is_superadmin(cq.from_user.id):
+        await cq.answer("Только супер-админ может добавлять категории.", show_alert=True)
+        return
+
+    await state.set_state(ProductFSM.add_category)
+    await cq.message.edit_text(
+        "Введите 3 строки:\n"
+        "RU: ...\n"
+        "UZ: ...\n"
+        "TJ: ...\n\n"
+        "Пример:\n"
+        "RU: Овощи\n"
+        "UZ: Sabzavot\n"
+        "TJ: Сабзавот",
+        reply_markup=kb_cancel(),
+    )
+    await cq.answer()
+
+@router.message(StateFilter(ProductFSM.add_category))
+async def add_category_save(message: Message, state: FSMContext, db: Database):
+    if not is_superadmin(message.from_user.id):
+        await message.answer("Только супер-админ может добавлять категории.")
+        await clear_state_keep_screen(state, db, "admin_restaurant", message.chat.id)
+        return
+
+    raw = (message.text or "").strip()
+    parsed = parse_triple_name(raw)
+    if not parsed:
+        await message.answer("Неверный формат. Введите 3 строки:\nRU: ...\nUZ: ...\nTJ: ...")
+        return
+
+    name_ru, name_uz, name_tj = parsed
+
+    ids = await get_admin_restaurant_ids(db, message.from_user.id)
+    if not ids:
+        await message.answer("Нет доступа.")
+        await clear_state_keep_screen(state, db, "admin_restaurant", message.chat.id)
+        return
+
+    restaurant_id = int(ids[0])  # как shop_id ресторана
+
+    await CategoriesRepo(db).create(
+        shop_id=restaurant_id,
+        name_ru=name_ru,
+        name_uz=name_uz,
+        name_tj=name_tj,
+        sort=0,
+    )
+
+    await clear_state_keep_screen(state, db, "admin_restaurant", message.chat.id)
+    await message.answer("Категория добавлена ✅\nОткройте «Меню → Категории» заново.")
 
 
 @router.callback_query(F.data.startswith("r:cat:"))

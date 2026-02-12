@@ -11,20 +11,22 @@ class CategoriesRepo:
     def __init__(self, db: Database):
         self.db = db
 
-    async def create(self, shop_id: int, name: str, sort: int = 0) -> int:
-        """
-        Категории общие по business_type.
-        shop_id нужен только чтобы определить business_type (shop/restaurant).
-        """
+    async def create(
+        self,
+        shop_id: int,
+        name_ru: str,
+        name_uz: str | None = None,
+        name_tj: str | None = None,
+        sort: int = 0,
+    ) -> int:
         shop = await ShopsRepo(self.db).get(shop_id)
         if not shop:
             raise ValueError(f"Shop not found: {shop_id}")
-
+    
         business_type = shop["business_type"]
-        name_norm = normalize_text(name)
-
+        name_norm = normalize_text(name_ru)
+    
         async with self.db.conn() as conn:
-            # Если уже существует категория для этого business_type — возвращаем id
             cur = await conn.execute(
                 "SELECT id FROM categories WHERE business_type=? AND name_norm=?",
                 (business_type, name_norm),
@@ -32,13 +34,26 @@ class CategoriesRepo:
             row = await cur.fetchone()
             if row:
                 return int(row["id"])
-
+    
             cur = await conn.execute(
-                "INSERT INTO categories (business_type, name, name_norm, sort) VALUES (?, ?, ?, ?)",
-                (business_type, name, name_norm, sort),
+                """
+                INSERT INTO categories
+                (business_type, name, name_ru, name_uz, name_tj, name_norm, sort)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    business_type,
+                    name_ru,
+                    name_ru,
+                    name_uz,
+                    name_tj,
+                    name_norm,
+                    sort,
+                ),
             )
             await conn.commit()
             return int(cur.lastrowid)
+
 
     async def rename(self, category_id: int, new_name: str) -> None:
         async with self.db.conn() as conn:

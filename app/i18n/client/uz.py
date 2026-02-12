@@ -98,7 +98,7 @@ TEXTS: dict[str, str] = {
     "checkout.multiple_shops": "Саватда турли дўконлар/ресторанлардан маҳсулот бор. Қайси нуқта учун буюртма берилади?",
     "checkout.confirm_title": "Буюртмани тасдиқланг:",
     "checkout.create_failed": "Буюртма яратиб бўлмади: сават бўш ёки бу нуқта учун буюртма аллақачон яратилган.",
-    "checkout.created": "✅ Буюртма муваффақиятли яратилди!\nБуюртма рақами: {order_id}\nҲолат: {status}",
+    "checkout.created": "✅ Буюртма муваффақиятли яратилди!\nБуюртма рақами: {order_id}\nСтатус: {status}",
 
     # Буюртмалар
     "orders.history.empty": "Буюртмалар тарихи бўш.",
@@ -107,9 +107,14 @@ TEXTS: dict[str, str] = {
     "orders.title": "Сизнинг буюртмаларингиз:",
     "order.not_found": "Буюртма топилмади.",
     "order.shop": "Нуқта: {shop_name}",
-    "order.status": "Ҳолат: {status}",
+    "order.status": "Статус: {status}",
     "order.total": "Жами: {total}",
     "order.items_title": "Таркиб:",
+    
+    # изохлар
+    "checkout.comment_label": "📝 Изоҳ:",
+    "checkout.comment_empty": "- қўшилмаган ...",
+
 
     # Чатлар
     "chat.none": "Фаол чатлар йўқ.",

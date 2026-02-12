@@ -77,6 +77,10 @@ class Database:
         # categories: нормализованное имя для поиска/дедупликации
         await add_column("categories", "name_norm", "name_norm TEXT DEFAULT ''")
         await add_column("categories", "business_type", "business_type TEXT DEFAULT 'shop'")
+        
+        await add_column("categories", "name_ru", "name_ru TEXT")
+        await add_column("categories", "name_uz", "name_uz TEXT")
+        await add_column("categories", "name_tj", "name_tj TEXT")
 
         # products: поля под поиск и импорт
         await add_column("products", "name_norm", "name_norm TEXT DEFAULT ''")

@@ -2,6 +2,12 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from app.i18n.client.translator import t
 
+def _pick_category_name(cat: dict, locale: str) -> str:
+    if locale == "uz":
+        return cat.get("name_uz") or cat.get("name_ru") or cat.get("name")
+    if locale == "tj":
+        return cat.get("name_tj") or cat.get("name_ru") or cat.get("name")
+    return cat.get("name_ru") or cat.get("name")
 
 def kb_client_main(locale: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -50,7 +56,9 @@ def kb_shops_list(locale: str, items: list[dict], kind: str) -> InlineKeyboardMa
 def kb_categories_list(locale: str, categories: list[dict], kind: str, shop_id: int) -> InlineKeyboardMarkup:
     kb = []
     for c in categories:
-        kb.append([InlineKeyboardButton(text=c["name"], callback_data=f"c:cat:{shop_id}:{c['id']}")])
+        title = _pick_category_name(c, locale)
+        kb.append([InlineKeyboardButton(text=title, callback_data=f"c:cat:{shop_id}:{c['id']}")])
+
     kb.append([InlineKeyboardButton(text=t(locale, "search.search"), callback_data=f"c:search:{kind}:{shop_id}")])
     kb.append([InlineKeyboardButton(text=t(locale, "search.at_search"), callback_data=f"c:at_search:{kind}:{shop_id}")])
     kb.append([

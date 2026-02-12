@@ -100,6 +100,10 @@ TEXTS: dict[str, str] = {
     "checkout.create_failed": "Не удалось создать заказ: корзина пуста или заказ уже создан для этой точки.",
     "checkout.created": "✅ Заказ успешно создан!\nНомер заказа: {order_id}\nСтатус: {status}",
 
+    # Комменты
+    "checkout.comment_label": "📝 Комментарий:",
+    "checkout.comment_empty": "— не добавлен —",
+
     # Заказы
     "orders.history.empty": "История заказов пуста.",
     "orders.empty": "Заказов пока нет.",

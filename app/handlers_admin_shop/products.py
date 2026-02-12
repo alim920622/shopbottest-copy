@@ -26,6 +26,28 @@ def is_superadmin(user_id: int) -> bool:
 router = Router()
 logger = logging.getLogger(__name__)
 
+def parse_triple_name(text: str) -> tuple[str, str, str] | None:
+    """
+    Формат:
+    RU: ...
+    UZ: ...
+    TJ: ...
+    """
+    lines = [l.strip() for l in (text or "").splitlines() if l.strip()]
+    data: dict[str, str] = {}
+
+    for line in lines:
+        if ":" not in line:
+            continue
+        k, v = line.split(":", 1)
+        k = k.strip().lower()
+        v = v.strip()
+        if k in ("ru", "uz", "tj") and v:
+            data[k] = v
+
+    if "ru" in data and "uz" in data and "tj" in data:
+        return data["ru"], data["uz"], data["tj"]
+    return None
 
 class ProductStates(StatesGroup):
     add_category = State()
@@ -174,7 +196,18 @@ async def add_category_prompt(cq: CallbackQuery, state: FSMContext, db: Database
         return
 
     await state.set_state(ProductStates.add_category)
-    await cq.message.edit_text("Введите название категории (например: Овощи):", reply_markup=kb_home())
+    await cq.message.edit_text(
+        "Введите 3 строки:\n"
+        "RU: ...\n"
+        "UZ: ...\n"
+        "TJ: ...\n\n"
+        "Пример:\n"
+        "RU: Овощи\n"
+        "UZ: Sabzavot\n"
+        "TJ: Сабзавот",
+        reply_markup=kb_home(),
+    )
+
     await cq.answer()
 
 
@@ -209,7 +242,23 @@ async def add_category_save(message: Message, state: FSMContext, db: Database):
         await message.answer("Слишком коротко. Введите название категории ещё раз:")
         return
 
-    await CategoriesRepo(db).create(shop_id=shop_id, name=name, sort=0)
+    parsed = parse_triple_name(name)
+    if not parsed:
+        await message.answer(
+            "Введите 3 строки:\nRU: ...\nUZ: ...\nTJ: ..."
+        )
+        return
+    
+    name_ru, name_uz, name_tj = parsed
+    
+    await CategoriesRepo(db).create(
+        shop_id=shop_id,
+        name_ru=name_ru,
+        name_uz=name_uz,
+        name_tj=name_tj,
+        sort=0,
+    )
+
 
     await clear_state_keep_screen(state, db, "admin_shop", message.chat.id)
     await message.answer("Категория добавлена ✅")

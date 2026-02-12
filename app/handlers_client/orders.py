@@ -137,7 +137,7 @@ def kb_chat_nav_rows(locale: str, order_id: int, back_target: str | None = None)
         ],
     ]
 
-def make_chat_render_fn(db: Database, state: FSMContext):
+def make_chat_render_fn(db: Database, state: FSMContext, locale: str):
     async def render():
         data = await state.get_data()
         order_id = int(data.get("chat_order_id") or 0)
@@ -161,7 +161,8 @@ def make_chat_render_fn(db: Database, state: FSMContext):
         offset = (total_pages - page) * PAGE_SIZE
         messages = await chat.list_messages(order_id, limit=PAGE_SIZE, offset=offset)
 
-        text = build_chat_screen_text(order_id, messages, False, business_type)
+        # Рендер чата должен быть в том же locale, что и остальной клиентский UI.
+        text = build_chat_screen_text(order_id, messages, False, business_type, locale)
         kb = build_chat_screen_kb(order_id, page, total_pages, "c", kb_chat_nav_rows(locale, order_id, back_target))
         return text, kb
 
@@ -169,7 +170,7 @@ def make_chat_render_fn(db: Database, state: FSMContext):
 
 
 @router.callback_query(F.data == "c:orders")
-async def list_orders(cq: CallbackQuery, db: Database, state: FSMContext):
+async def list_orders(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "orders", {})
@@ -186,7 +187,7 @@ async def list_orders(cq: CallbackQuery, db: Database, state: FSMContext):
 
 
 @router.callback_query(F.data == "c:history")
-async def list_history(cq: CallbackQuery, db: Database, state: FSMContext):
+async def list_history(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
     await state.update_data(user_id=cq.from_user.id)
     await remember_client_screen(state, "history", {})
@@ -367,7 +368,7 @@ async def open_chat(cq: CallbackQuery, state: FSMContext, db: Database, locale: 
         bot=cq.bot,
         chat_id=cq.from_user.id,
         state=state,
-        render=make_chat_render_fn(db, state),
+        render=make_chat_render_fn(db, state, locale),
         db=db,
         bot_kind="client",
     )
@@ -402,7 +403,7 @@ async def paginate_chat(cq: CallbackQuery, state: FSMContext, db: Database, loca
         bot=cq.bot,
         chat_id=cq.from_user.id,
         state=state,
-        render=make_chat_render_fn(db, state),
+        render=make_chat_render_fn(db, state, locale),
         db=db,
         bot_kind="client",
     )
@@ -455,7 +456,7 @@ async def send_chat_message(message: Message, state: FSMContext, db: Database, l
         bot=message.bot,
         chat_id=message.chat.id,
         state=state,
-        render=make_chat_render_fn(db, state),
+        render=make_chat_render_fn(db, state, locale),
         db=db,
         bot_kind="client",
     )

@@ -4,6 +4,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+from aiogram.exceptions import TelegramBadRequest
 
 from app.db.database import Database
 from app.handlers_admin_shop.utils import get_admin_shop_ids, is_shop_admin
@@ -98,9 +99,21 @@ async def build_chat_payload(
     return text, kb
 
 
-async def render_chat(cq: CallbackQuery, db: Database, order_id: int, page: int, back_target: str) -> None:
+async def render_chat(cq: CallbackQuery, db: Database, order_id: int, page: int, back_target: str, state: FSMContext | None = None) -> None:
     text, kb = await build_chat_payload(db, order_id, page, back_target)
-    await cq.message.edit_text(text, reply_markup=kb)
+
+    try:
+        if cq.message:
+            await cq.message.edit_text(text, reply_markup=kb)
+            return
+    except TelegramBadRequest:
+        pass
+
+    # если редактировать нельзя — рисуем новый экран
+    msg = await cq.bot.send_message(cq.from_user.id, text, reply_markup=kb)
+    if state is not None:
+        await state.update_data(chat_message_id=msg.message_id)
+        await set_screen_message_id(state, db, "admin_shop", msg.chat.id, msg.message_id)
 
 
 async def open_chat_by_order_id(

@@ -1,0 +1,169 @@
+diff -ruN app/handlers_client/catalog.py /app/handlers_client/catalog.py
+--- app/handlers_client/catalog.py	2026-02-11 17:31:27.000000000 +0000
++++ app/handlers_client/catalog.py	2026-02-11 17:52:34.919952617 +0000
+@@ -155,7 +155,7 @@
+ 
+ 
+ @router.callback_query(F.data == "c:home")
+-async def client_home(cq: CallbackQuery, db: Database, state: FSMContext):
++async def client_home(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
+     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
+     await state.update_data(user_id=cq.from_user.id)
+     await remember_client_screen(state, "main", {})
+@@ -176,7 +176,7 @@
+     await cq.answer()
+ 
+ @router.callback_query(F.data == "c:order_menu")
+-async def order_menu(cq: CallbackQuery, db: Database, state: FSMContext):
++async def order_menu(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
+     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
+     await state.update_data(user_id=cq.from_user.id)
+     await remember_client_screen(state, "order_menu", {})
+@@ -184,7 +184,7 @@
+     await cq.answer()
+ 
+ @router.callback_query(F.data == "c:cart_menu")
+-async def cart_menu(cq: CallbackQuery, state: FSMContext):
++async def cart_menu(cq: CallbackQuery, state: FSMContext, locale: str = "ru"):
+     await state.update_data(last_view={"name": "cart_menu"})
+     await state.update_data(user_id=cq.from_user.id)
+     await remember_client_screen(state, "cart_menu", {})
+@@ -225,7 +225,7 @@
+     await cq.answer()
+ 
+ 
+-async def show_categories(message: Message, db: Database, kind: str, shop_id: int):
++async def show_categories(message: Message, db: Database, kind: str, shop_id: int, locale: str = "ru"):
+     cats = CategoriesRepo(db)
+     categories = await cats.list_for_shop(shop_id, active_only=True)
+     if not categories:
+@@ -347,7 +347,7 @@
+ 
+ 
+ @router.callback_query(F.data.startswith("c:prodsku:"))
+-async def open_product_by_sku(cq: CallbackQuery, db: Database, state: FSMContext):
++async def open_product_by_sku(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
+     # c:prodsku:{shop_id}:{sku}
+     _, _, shop_id_str, sku = cq.data.split(":", 3)
+     shop_id = int(shop_id_str)
+@@ -378,7 +378,7 @@
+ 
+ 
+ @router.callback_query(F.data.startswith("c:addsku:"))
+-async def add_to_cart_by_sku(cq: CallbackQuery, db: Database):
++async def add_to_cart_by_sku(cq: CallbackQuery, db: Database, locale: str = "ru"):
+     # c:addsku:{shop_id}:{sku}
+     _, _, shop_id_str, sku = cq.data.split(":", 3)
+     shop_id = int(shop_id_str)
+@@ -399,7 +399,7 @@
+     await cq.answer(t(locale, "cart.added"))
+ 
+ @router.callback_query(F.data.startswith("c:add:"))
+-async def add_to_cart(cq: CallbackQuery, db: Database):
++async def add_to_cart(cq: CallbackQuery, db: Database, locale: str = "ru"):
+     # c:add:{product_id}
+     product_id = int(cq.data.split(":")[2])
+ 
+@@ -416,7 +416,7 @@
+ 
+ 
+ @router.callback_query(F.data.startswith("c:pickback:"))
+-async def back_to_categories(cq: CallbackQuery, db: Database):
++async def back_to_categories(cq: CallbackQuery, db: Database, locale: str = "ru"):
+     # c:pickback:{shop_id}
+     shop_id = int(cq.data.split(":")[2])
+ 
+@@ -441,7 +441,7 @@
+ 
+ 
+ @router.callback_query(F.data.startswith("c:back:"))
+-async def back(cq: CallbackQuery, db: Database, state: FSMContext):
++async def back(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
+     parts = cq.data.split(":")
+     target = parts[2] if len(parts) > 2 else ""
+     data = await state.get_data()
+@@ -775,7 +775,7 @@
+ 
+ 
+ @router.callback_query(F.data == "c:checkout_back")
+-async def checkout_back(cq: CallbackQuery, state: FSMContext):
++async def checkout_back(cq: CallbackQuery, state: FSMContext, locale: str = "ru"):
+     data = await state.get_data()
+     shop_ids = data.get("checkout_shop_ids") or []
+     if shop_ids:
+@@ -891,7 +891,7 @@
+         await message.answer(text, reply_markup=reply_markup)
+ 
+ 
+-async def _create_order_for_shop(cq: CallbackQuery, db: Database, state: FSMContext, shop_id: int):
++async def _create_order_for_shop(cq: CallbackQuery, db: Database, state: FSMContext, shop_id: int, locale: str = "ru"):
+     orders = OrdersRepo(db)
+     data = await state.get_data()
+     comment = (data.get("order_comment") or "").strip()
+diff -ruN app/handlers_client/orders.py /app/handlers_client/orders.py
+--- app/handlers_client/orders.py	2026-02-11 17:31:27.000000000 +0000
++++ app/handlers_client/orders.py	2026-02-11 17:57:33.931522166 +0000
+@@ -137,7 +137,7 @@
+         ],
+     ]
+ 
+-def make_chat_render_fn(db: Database, state: FSMContext):
++def make_chat_render_fn(db: Database, state: FSMContext, locale: str):
+     async def render():
+         data = await state.get_data()
+         order_id = int(data.get("chat_order_id") or 0)
+@@ -161,7 +161,8 @@
+         offset = (total_pages - page) * PAGE_SIZE
+         messages = await chat.list_messages(order_id, limit=PAGE_SIZE, offset=offset)
+ 
+-        text = build_chat_screen_text(order_id, messages, False, business_type)
++        # Рендер чата должен быть в том же locale, что и остальной клиентский UI.
++        text = build_chat_screen_text(order_id, messages, False, business_type, locale)
+         kb = build_chat_screen_kb(order_id, page, total_pages, "c", kb_chat_nav_rows(locale, order_id, back_target))
+         return text, kb
+ 
+@@ -169,7 +170,7 @@
+ 
+ 
+ @router.callback_query(F.data == "c:orders")
+-async def list_orders(cq: CallbackQuery, db: Database, state: FSMContext):
++async def list_orders(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
+     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
+     await state.update_data(user_id=cq.from_user.id)
+     await remember_client_screen(state, "orders", {})
+@@ -186,7 +187,7 @@
+ 
+ 
+ @router.callback_query(F.data == "c:history")
+-async def list_history(cq: CallbackQuery, db: Database, state: FSMContext):
++async def list_history(cq: CallbackQuery, db: Database, state: FSMContext, locale: str = "ru"):
+     await clear_state_keep_screen(state, db, "client", cq.from_user.id)
+     await state.update_data(user_id=cq.from_user.id)
+     await remember_client_screen(state, "history", {})
+@@ -367,7 +368,7 @@
+         bot=cq.bot,
+         chat_id=cq.from_user.id,
+         state=state,
+-        render=make_chat_render_fn(db, state),
++        render=make_chat_render_fn(db, state, locale),
+         db=db,
+         bot_kind="client",
+     )
+@@ -402,7 +403,7 @@
+         bot=cq.bot,
+         chat_id=cq.from_user.id,
+         state=state,
+-        render=make_chat_render_fn(db, state),
++        render=make_chat_render_fn(db, state, locale),
+         db=db,
+         bot_kind="client",
+     )
+@@ -455,7 +456,7 @@
+         bot=message.bot,
+         chat_id=message.chat.id,
+         state=state,
+-        render=make_chat_render_fn(db, state),
++        render=make_chat_render_fn(db, state, locale),
+         db=db,
+         bot_kind="client",
+     )
