@@ -3,6 +3,7 @@ import os
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
+from app.handlers.noop import router as noop_router
 
 from app.db.database import Database, DBConfig
 from app.handlers_admin_shop.start import router as start_router
@@ -35,8 +36,10 @@ async def main():
     dp.include_router(orders_router)
     dp.include_router(chat_router)
     dp.include_router(notifications_router)
+    dp.include_router(noop_router)
     dp.include_router(fallback_router)
-
+    
+    
     asyncio.create_task(run_chat_reminder_worker(bot, db, "admin_shop", dp.storage))
     await dp.start_polling(bot)
 

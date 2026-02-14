@@ -1,3 +1,4 @@
+from app.repositories.shops_repo import ShopsRepo
 from app.config import get_settings
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -6,6 +7,8 @@ from aiogram.types import Message
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.exceptions import TelegramBadRequest
+from app.services.pagination import calc_page, pager_row
+from aiogram.types import InlineKeyboardButton
 
 from app.db.database import Database
 from app.handlers_admin_restaurant.utils import get_admin_restaurant_ids
@@ -15,6 +18,7 @@ from app.services.search_utils import normalize_text, build_keywords
 from app.services.screen import clear_state_keep_screen
 from app.services.notification_center import remember_admin_prev_target
 
+PAGE_SIZE = 8
 router = Router()
 class ProductFSM(StatesGroup):
     add_name = State()
@@ -46,20 +50,31 @@ def kb_cancel() -> InlineKeyboardMarkup:
     ])
 
 
-def kb_categories(categories: list[dict], restaurant_id: int, user_id: int) -> InlineKeyboardMarkup:
-    kb = []
+def kb_categories(
+    categories: list[dict],
+    restaurant_id: int,
+    user_id: int,
+    *,
+    include_add: bool = True,
+    include_nav: bool = True,
+) -> InlineKeyboardMarkup:
+    kb: list[list[InlineKeyboardButton]] = []
+
     for c in categories:
         kb.append([InlineKeyboardButton(
             text=c["name"],
             callback_data=f"r:cat:{restaurant_id}:{c['id']}"
         )])
-    if is_superadmin(user_id):
+
+    if include_add and is_superadmin(user_id):
         kb.append([InlineKeyboardButton(text="➕ Добавить категорию", callback_data="r:addcat")])
-    
-    kb.append([
-        InlineKeyboardButton(text="🏠 Главная", callback_data="r:home"),
-        InlineKeyboardButton(text="🔙 Назад", callback_data="r:back:main"),
-    ])
+
+    if include_nav:
+        kb.append([
+            InlineKeyboardButton(text="🏠 Главная", callback_data="r:home"),
+            InlineKeyboardButton(text="🔙 Назад", callback_data="r:back:main"),
+        ])
+
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
 
@@ -459,10 +474,21 @@ async def edit_desc_apply(message: Message, state: FSMContext, db: Database):
     except Exception:
         pass
 
+@router.callback_query(F.data.startswith("r:cats:p:"))
+async def list_categories_page(cq: CallbackQuery, db: Database, state: FSMContext):
+    page = int(cq.data.split(":")[-1])
+    await list_categories_render(cq, db, state, page=page)
+
 
 @router.callback_query(F.data == "r:cats")
-async def list_categories(cq: CallbackQuery, db: Database):
+async def list_categories(cq: CallbackQuery, db: Database, state: FSMContext):
+    await list_categories_render(cq, db, state, page=0)
+
+
+async def list_categories_render(cq: CallbackQuery, db: Database, state: FSMContext, page: int):
+    # сохранить "назад" и доступ как было
     await remember_admin_prev_target(db, "admin_restaurant", cq.from_user.id, "r:cats")
+
     ids = await get_admin_restaurant_ids(db, cq.from_user.id)
     if not ids:
         await cq.message.edit_text("Нет доступа.", reply_markup=nav("r:home", "r:back:main"))
@@ -470,20 +496,57 @@ async def list_categories(cq: CallbackQuery, db: Database):
         return
 
     restaurant_id = ids[0]  # MVP: первый ресторан админа
-    cats = CategoriesRepo(db)
 
-    # ✅ Общие категории для всех ресторанов
-    categories = await cats.list_for_business_type("restaurant", active_only=True)
+    cats = CategoriesRepo(db)
+    shop = await ShopsRepo(db).get(restaurant_id)
+    business_type = shop["business_type"]
+    
+    categories = await cats.list_for_business_type(
+        business_type,
+        active_only=False
+    )
+
 
     if not categories:
         await cq.message.edit_text(
-            "Пока нет общих категорий ресторанов (создаёт суперадмин).",
+            "В ресторане пока нет категорий (создаёт суперадмин).",
             reply_markup=nav("r:home", "r:back:main")
         )
         await cq.answer()
         return
 
-    await cq.message.edit_text("Выберите категорию:", reply_markup=kb_categories(categories, restaurant_id, cq.from_user.id))
+    # пагинация
+    total = len(categories)
+    pi = calc_page(total=total, page=page, page_size=PAGE_SIZE)
+    page_items = categories[pi.offset: pi.offset + pi.limit]
+
+    kb = kb_categories(page_items, restaurant_id, cq.from_user.id, include_add=False, include_nav=False)
+
+    # 1) пагинация сразу после списка
+    pager = pager_row("r:cats", pi.page, pi.total_pages)
+    if pager:
+        kb.inline_keyboard.append(pager)
+    
+    # 2) добавить категорию
+    if is_superadmin(cq.from_user.id):
+        kb.inline_keyboard.append([
+            InlineKeyboardButton(text="➕ Добавить категорию", callback_data="r:addcat")
+        ])
+    
+    # 3) главная/назад в самом низу
+    kb.inline_keyboard.append([
+        InlineKeyboardButton(text="🏠 Главная", callback_data="r:home"),
+        InlineKeyboardButton(text="🔙 Назад", callback_data="r:back:main"),
+    ])
+
+
+
+    await cq.message.edit_text("Выберите категорию:", reply_markup=kb)
+    await cq.answer()
+    
+    
+@router.callback_query(F.data == "noop")
+async def noop(cq: CallbackQuery):
     await cq.answer()
 
 

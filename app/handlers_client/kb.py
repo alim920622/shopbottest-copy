@@ -227,10 +227,36 @@ def kb_chat_orders(locale: str, order_ids: list[int], prefix: str) -> InlineKeyb
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
 
-def kb_orders_list(locale: str, order_ids: list[int], back_target: str = "main") -> InlineKeyboardMarkup:
-    kb = []
+def kb_orders_list(
+    locale: str,
+    order_ids: list[int],
+    back_target: str = "main",
+    pager_prefix: str | None = None,   # например "c:orders" или "c:history"
+    page: int | None = None,           # 0-based
+    total_pages: int | None = None,    # >= 1
+) -> InlineKeyboardMarkup:
+    kb: list[list[InlineKeyboardButton]] = []
+
     for oid in order_ids:
-        kb.append([InlineKeyboardButton(text=t(locale, "orders.item_tpl", order_id=oid), callback_data=f"c:order:{oid}")])
+        kb.append([InlineKeyboardButton(
+            text=t(locale, "orders.item_tpl", order_id=oid),
+            callback_data=f"c:order:{oid}"
+        )])
+
+    # Пагинация (показываем только если реально есть 2+ страниц)
+    if pager_prefix and page is not None and total_pages and total_pages > 1:
+        row: list[InlineKeyboardButton] = []
+
+        if page > 0:
+            row.append(InlineKeyboardButton(text="◀️", callback_data=f"{pager_prefix}:p:{page-1}"))
+
+        row.append(InlineKeyboardButton(text=f"{page+1}/{total_pages}", callback_data="c:noop"))
+
+        if page < total_pages - 1:
+            row.append(InlineKeyboardButton(text="➡️", callback_data=f"{pager_prefix}:p:{page+1}"))
+
+        kb.append(row)
+
     kb.append([InlineKeyboardButton(text=t(locale, "nav.back"), callback_data=f"c:back:{back_target}")])
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
