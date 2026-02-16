@@ -15,6 +15,34 @@ from app.db.database import DBConfig, Database
 
 load_dotenv()
 
+from fastapi.openapi.utils import get_openapi
+
+def custom_openapi(app: FastAPI):
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description="API ShopBot",
+        routes=app.routes,
+    )
+
+    # 1) Описываем Bearer JWT
+    openapi_schema.setdefault("components", {}).setdefault("securitySchemes", {})
+    openapi_schema["components"]["securitySchemes"]["BearerAuth"] = {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+    }
+
+    # 2) Делаем BearerAuth глобальным (для всех методов).
+    # Если хочешь только для части методов — уберём глобальность позже.
+    openapi_schema["security"] = [{"BearerAuth": []}]
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
 
 def create_app() -> FastAPI:
     app = FastAPI(title="ShopBot API", version="0.1.0")
@@ -29,6 +57,8 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["system"])
     async def health() -> dict:
         return {"ok": True}
+        
+    app.openapi = lambda: custom_openapi(app)
 
     return app
 
