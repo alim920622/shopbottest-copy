@@ -109,6 +109,19 @@ class Database:
         )
         await connection.execute(
             """
+            CREATE TABLE IF NOT EXISTS refresh_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                token TEXT NOT NULL UNIQUE,
+                expires_at DATETIME NOT NULL,
+                revoked INTEGER NOT NULL DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            )
+            """
+        )
+        await connection.execute(
+            """
             CREATE TABLE IF NOT EXISTS search_synonyms (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 shop_id INTEGER,
@@ -219,6 +232,8 @@ class Database:
         )
 
         await connection.execute("CREATE INDEX IF NOT EXISTS idx_products_name_norm ON products(name_norm);")
+        await connection.execute("CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens(token);")
+        await connection.execute("CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);")
         await connection.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_products_sku ON products(sku);")
         await connection.execute("CREATE INDEX IF NOT EXISTS idx_products_keywords_norm ON products(keywords_norm);")
 
