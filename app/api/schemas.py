@@ -9,6 +9,16 @@ RoleType = Literal["client", "admin_shop", "admin_restaurant"]
 BusinessType = Literal["shop", "restaurant"]
 
 
+class TelegramWidgetRequest(BaseModel):
+    id: int
+    first_name: str | None = None
+    last_name: str | None = None
+    username: str | None = None
+    photo_url: str | None = None
+    auth_date: int
+    hash: str
+
+
 class TelegramAuthRequest(BaseModel):
     telegram_user_id: int = Field(gt=0)
 
