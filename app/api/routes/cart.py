@@ -66,7 +66,9 @@ async def sync_cart(
         for item in payload.items:
             if item.quantity > 0:
                 await conn.execute(
-                    """INSERT INTO cart (user_id, product_id, quantity)
-                       VALUES (?, ?, ?)
-                       ON CONFLICT(user_id, product_id)
-                       DO UPDATE SET quantity=excluded.quantity""",
+                    "INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?) ON CONFLICT(user_id, product_id) DO UPDATE SET quantity=excluded.quantity",
+                    (user.user_id, item.product_id, item.quantity),
+                )
+        await conn.commit()
+    items = await repo.list_items(user.user_id)
+    return {"items": [dict(i) for i in items], "source": "local"}

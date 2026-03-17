@@ -3,8 +3,6 @@ import os
 import uvicorn
 from dotenv import load_dotenv
 load_dotenv()
-from app.api.routes.cart import router as cart_router
-app.include_router(cart_router)
 from fastapi import FastAPI
 from app.api.routes.auth import router as auth_router
 from app.api.routes.catalog import router as catalog_router
