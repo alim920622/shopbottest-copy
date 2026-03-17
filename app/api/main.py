@@ -3,10 +3,13 @@ import os
 import uvicorn
 from dotenv import load_dotenv
 load_dotenv()
+from app.api.routes.cart import router as cart_router
+app.include_router(cart_router)
 from fastapi import FastAPI
 from app.api.routes.auth import router as auth_router
 from app.api.routes.catalog import router as catalog_router
 from app.api.routes.chats import router as chats_router
+from app.api.routes.cart import router as cart_router
 from app.api.routes.profile import router as profile_router
 from app.api.routes.orders import router as orders_router
 from app.db.database import DBConfig, Database
@@ -40,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(catalog_router)
     app.include_router(orders_router)
+    app.include_router(cart_router)
     app.include_router(chats_router)
     app.include_router(profile_router)
 
