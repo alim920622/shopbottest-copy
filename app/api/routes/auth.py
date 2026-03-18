@@ -124,7 +124,7 @@ async def refresh_access_token(payload: RefreshTokenRequest, db: Database = Depe
     if int(row["revoked"]) == 1:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh токен отозван")
 
-    expires_at = datetime.fromisoformat(row["expires_at"])
+    expires_at = row["expires_at"] if hasattr(row["expires_at"], "year") else datetime.fromisoformat(str(row["expires_at"]))
     if expires_at <= datetime.utcnow():
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Срок действия refresh токена истёк")
 
