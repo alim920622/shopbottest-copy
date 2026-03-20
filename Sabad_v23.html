@@ -42,7 +42,7 @@ body.dark{--bg:#282828;--bg2:#333333;--text:#e0e0e0;--text2:#8e8ea0;--border:rgb
 .yovar-pupil{animation:yovar-look 10s ease-in-out infinite}
 .yovar-mouth{animation:yovar-smile 10s ease-in-out infinite}
 body{background:var(--page);font-family:var(--font);display:flex;justify-content:center;min-height:100vh;overflow-x:hidden;transition:background .3s}
-.app{position:relative;max-width:420px;width:100%;overflow:hidden;margin:0 auto}
+.app{position:relative;max-width:420px;width:100%;overflow-x:hidden;margin:0 auto}
 .screen{display:none;width:100%;padding:16px 16px 100px;min-height:100vh}
 .screen.active{display:block}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 0 18px}
@@ -310,8 +310,12 @@ body{background:var(--page);font-family:var(--font);display:flex;justify-content
 .modal-msg.out{background:var(--indigo);color:#fff;border-radius:13px 13px 3px 13px;align-self:flex-end}
 .modal-action-btn{display:inline-block;margin-top:7px;padding:5px 11px;background:var(--green);color:#fff;border-radius:12px;font-size:12px;cursor:pointer;border:none;font-family:var(--font)}
 .modal-suggs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;flex-shrink:0}
-.modal-sugg{padding:6px 12px;background:var(--bg2);border:.5px solid var(--border);border-radius:14px;font-size:12px;color:var(--text2);cursor:pointer;white-space:nowrap}
-.modal-sugg:hover{border-color:var(--border3);color:var(--text)}
+/* --- Venue category tabs (Uber Eats style) --- */
+#venue-cat-tabs::-webkit-scrollbar{display:none}
+.cat-tab{display:inline-block;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:.5px solid var(--border);color:var(--text2);background:var(--bg);white-space:nowrap;transition:all .15s;flex-shrink:0}
+.cat-tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.cat-section-title{font-size:17px;font-weight:600;color:var(--text);padding:16px 0 10px;border-bottom:.5px solid var(--border);margin-bottom:2px}
+
 .modal-inp-row{display:flex;gap:7px;flex-shrink:0}
 .modal-inp-row input{flex:1;padding:10px 13px;background:var(--bg2);border:.5px solid var(--border);border-radius:19px;font-size:14px;color:var(--text);font-family:var(--font);outline:none}
 .modal-inp-row input:focus{border-color:var(--border3)}
@@ -330,16 +334,16 @@ body{background:var(--page);font-family:var(--font);display:flex;justify-content
       <div class="sb-close" onclick="closeSB()">✕</div>
     </div>
   </div>
-  <div class="sb-user"><div class="sb-avatar">АД</div><div><div class="sb-name">Алим Достонов</div><div class="sb-phone">+992 900 000 000</div></div></div>
+  <div class="sb-user"><div class="sb-avatar" id="sb-avatar">?</div><div><div class="sb-name" id="sb-name">Гость</div><div class="sb-phone" id="sb-phone"></div></div></div>
   <div class="sb-sec">Разделы</div>
   <div class="sb-item" onclick="closeSB();goTo('favourites')"><div class="sb-ico ico-red">❤️</div><span class="sb-item-label">Избранное</span><span class="sb-badge" id="fav-count">2</span></div>
   <div class="sb-item" onclick="closeSB();goTo('notifications')"><div class="sb-ico ico-blue">🔔</div><span class="sb-item-label">Уведомления</span><span class="sb-badge">3</span></div>
   <div class="sb-item" onclick="closeSB();goTo('chat-support')"><div class="sb-ico ico-green">💬</div><span class="sb-item-label">Чат с поддержкой</span></div>
   <div class="sb-item" onclick="closeSB();goTo('promos')"><div class="sb-ico ico-orange">🎁</div><span class="sb-item-label">Акции и промокоды</span></div>
   <div class="sb-sec">Настройки</div>
-  <div class="sb-item" onclick="closeSB()"><div class="sb-ico ico-purple">🌐</div><span class="sb-item-label">Язык</span><span style="margin-left:auto;font-size:12px;color:var(--text2)">RU</span></div>
+  <div class="sb-item" onclick="closeSB();goTo('language')"><div class="sb-ico ico-purple">🌐</div><span class="sb-item-label">Язык</span><span style="margin-left:auto;font-size:12px;color:var(--text2)">RU</span></div>
   <div class="sb-item" onclick="closeSB();goTo('addresses')"><div class="sb-ico ico-blue">📍</div><span class="sb-item-label">Адреса доставки</span></div>
-  <div class="sb-item" onclick="closeSB();goTo('onboard')"><div class="sb-ico ico-red">🚪</div><span class="sb-item-label">Выйти</span></div>
+  <div class="sb-item" onclick="closeSB();logout()"><div class="sb-ico ico-red">🚪</div><span class="sb-item-label">Выйти</span></div>
   <div class="sb-footer"><div class="sb-pts"><div style="font-size:18px">⭐</div><div><div class="sb-pts-lbl">Бонусные баллы</div><div class="sb-pts-val">320 баллов</div></div></div></div>
 </div>
 
@@ -350,18 +354,9 @@ body{background:var(--page);font-family:var(--font);display:flex;justify-content
     <div class="onboard-art">🛵</div>
     <div id="step-phone">
       <div class="onboard-title">Добро пожаловать!</div>
-      <div class="onboard-sub">Введите номер телефона — мы отправим код подтверждения.</div>
-      <div class="phone-row"><div class="phone-pre">+992</div><input class="phone-inp" id="phone-inp" type="tel" placeholder="900 000 000" maxlength="12"/></div>
-      <button class="btn-primary" onclick="sendCode()">Получить код</button>
+      <div class="onboard-sub">Войдите через Telegram — быстро и безопасно.</div>
+      <div id="tg-widget-wrap" style="display:flex;justify-content:center;margin:20px 0 10px"></div>
       <div class="skip-btn" onclick="skipAndGo()">Пропустить →</div>
-    </div>
-    <div id="step-otp" style="display:none">
-      <div class="onboard-title">Введите код</div>
-      <div class="onboard-sub">Отправили СМС на <strong id="otp-num"></strong></div>
-      <div class="otp-row"><input class="otp-box" maxlength="1" oninput="otpNext(this,0)"/><input class="otp-box" maxlength="1" oninput="otpNext(this,1)"/><input class="otp-box" maxlength="1" oninput="otpNext(this,2)"/><input class="otp-box" maxlength="1" oninput="otpNext(this,3)"/></div>
-      <div class="onboard-note">Не получили? <span onclick="alert('Код отправлен повторно')">Отправить ещё раз</span></div>
-      <button class="btn-primary" onclick="loginAndGo()">Войти</button>
-      <div class="skip-btn" onclick="document.getElementById('step-phone').style.display='';document.getElementById('step-otp').style.display='none'">← Изменить номер</div>
     </div>
   </div>
 </div>
@@ -401,12 +396,17 @@ body{background:var(--page);font-family:var(--font);display:flex;justify-content
   </div>
 </div>
 
-<div class="screen" id="screen-venue">
-  <div class="topbar"><button class="back-btn" onclick="goTo('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" width="18" height="18"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Назад</button></div>
-  <div class="venue-hero"><div class="venue-emoji" id="v-emoji">🍜</div><div><div class="venue-name" id="v-name">Самарканд</div><div class="venue-meta" id="v-meta"></div></div></div>
-  <div class="search-bar"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3 3"/></svg><span id="v-search">Поиск...</span></div>
-  <div class="menu-sec-title" id="v-section">Меню</div>
-  <div id="v-menu"></div>
+<div class="screen" id="screen-venue" style="padding:0 0 100px">
+  <!-- Хедер заведения -->
+  <div style="padding:12px 16px 10px;background:var(--bg)">
+    <button class="back-btn" onclick="goTo('home')" style="margin-bottom:12px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" width="18" height="18"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Назад</button>
+    <div class="venue-hero" style="margin-bottom:12px"><div class="venue-emoji" id="v-emoji">🍜</div><div><div class="venue-name" id="v-name">Магазин</div><div class="venue-meta" id="v-meta"></div></div></div>
+    <div class="search-bar" style="margin-bottom:0"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3 3"/></svg><span id="v-search">Поиск...</span></div>
+  </div>
+  <!-- Sticky вкладки категорий -->
+  <div id="venue-cat-tabs" style="position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:.5px solid var(--border);padding:8px 16px;overflow-x:auto;white-space:nowrap;display:flex;gap:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div>
+  <!-- Меню — секции по категориям -->
+  <div id="v-menu" style="padding:0 16px 16px"></div>
 </div>
 
 <div class="screen" id="screen-search">
@@ -429,7 +429,7 @@ body{background:var(--page);font-family:var(--font);display:flex;justify-content
 <div class="screen" id="screen-checkout">
   <div class="topbar"><button class="back-btn" onclick="goTo('cart')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" width="18" height="18"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Корзина</button></div>
   <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:18px">Оформление заказа</div>
-  <div class="checkout-step"><div class="checkout-label">📍 АДРЕС ДОСТАВКИ</div><input class="checkout-field" placeholder="Улица и дом" value="пр. Рудаки, 105"/><input class="checkout-field" placeholder="Квартира / офис (необязательно)"/></div>
+  <div class="checkout-step"><div class="checkout-label">📍 АДРЕС ДОСТАВКИ</div><input class="checkout-field" id="co-addr1" placeholder="Улица и дом"/><input class="checkout-field" id="co-addr2" placeholder="Квартира / офис (необязательно)"/></div>
   <div class="checkout-step"><div class="checkout-label">💳 СПОСОБ ОПЛАТЫ</div><div class="pay-options"><div class="pay-opt selected" id="pay-cash" onclick="selPay('cash')"><div class="pay-opt-left">💵 Наличные при получении</div><div class="pay-check"><div class="pay-check-inner"></div></div></div><div class="pay-opt" id="pay-card" onclick="selPay('card')"><div class="pay-opt-left">💳 Банковская карта</div><div class="pay-check"><div class="pay-check-inner"></div></div></div><div class="pay-opt" id="pay-mobile" onclick="selPay('mobile')"><div class="pay-opt-left">📱 Мобильный кошелёк</div><div class="pay-check"><div class="pay-check-inner"></div></div></div></div></div>
   <div class="cart-summary" id="co-summary"></div>
   <button class="btn-primary" onclick="placeOrder()">Подтвердить заказ</button>
@@ -451,14 +451,14 @@ body{background:var(--page);font-family:var(--font);display:flex;justify-content
 
 <div class="screen" id="screen-profile">
   <div class="topbar"><div class="logo">Сабад<span>.</span></div></div>
-  <div class="profile-header"><div class="profile-avatar">АД</div><div><div class="profile-name">Алим Достонов</div><div class="profile-phone">+992 900 000 000</div></div></div>
+  <div class="profile-header"><div class="profile-avatar" id="prof-avatar">?</div><div><div class="profile-name" id="prof-name">Гость</div><div class="profile-phone" id="prof-phone">Телефон не указан</div></div></div>
   <div class="profile-menu">
     <div class="profile-row" onclick="goTo('addresses')"><div class="profile-row-left"><div class="profile-row-icon">📍</div><span class="profile-row-label">Адреса доставки</span></div><span class="profile-arrow">›</span></div>
     <div class="profile-row" onclick="goTo('payment')"><div class="profile-row-left"><div class="profile-row-icon">💳</div><span class="profile-row-label">Способ оплаты</span></div><span class="profile-arrow">›</span></div>
     <div class="profile-row" onclick="goTo('chat-support')"><div class="profile-row-left"><div class="profile-row-icon">💬</div><span class="profile-row-label">Чат с поддержкой</span></div><span class="profile-arrow">›</span></div>
     <div class="profile-row" onclick="goTo('language')"><div class="profile-row-left"><div class="profile-row-icon">🌐</div><span class="profile-row-label">Язык приложения</span></div><span class="profile-arrow">›</span></div>
     <div class="profile-row" onclick="goTo('notifications')"><div class="profile-row-left"><div class="profile-row-icon">🔔</div><span class="profile-row-label">Уведомления</span></div><span class="profile-arrow">›</span></div>
-    <div class="profile-row" onclick="goTo('onboard')"><div class="profile-row-left"><div class="profile-row-icon">🚪</div><span class="profile-row-label">Выйти</span></div><span class="profile-arrow">›</span></div>
+    <div class="profile-row" onclick="logout()"><div class="profile-row-left"><div class="profile-row-icon">🚪</div><span class="profile-row-label">Выйти</span></div><span class="profile-arrow">›</span></div>
   </div>
 </div>
 
@@ -501,11 +501,13 @@ body{background:var(--page);font-family:var(--font);display:flex;justify-content
 <div class="screen" id="screen-addresses">
   <div class="topbar"><button class="back-btn" onclick="goTo('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" width="18" height="18"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>Назад</button></div>
   <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:18px">Адреса доставки</div>
-  <div class="settings-menu">
-    <div class="settings-row"><div class="settings-row-left"><div class="settings-row-icon">🏠</div><div><div class="settings-row-label">Дом</div><div class="settings-row-sub">пр. Рудаки, 105, кв. 12</div></div></div><div class="settings-row-right"><span style="font-size:11px;padding:2px 8px;background:#E1F5EE;color:#085041;border-radius:10px">Основной</span><span class="settings-arrow">›</span></div></div>
-    <div class="settings-row"><div class="settings-row-left"><div class="settings-row-icon">💼</div><div><div class="settings-row-label">Работа</div><div class="settings-row-sub">ул. Бохтар, 45, офис 3</div></div></div><div class="settings-row-right"><span class="settings-arrow">›</span></div></div>
+  <div class="settings-menu" id="addresses-list"></div>
+  <div id="address-form" style="display:none;margin-top:14px">
+    <textarea id="address-input" class="comment-box" rows="3" placeholder="Введите адрес доставки..."></textarea>
+    <button class="btn-primary" style="margin-top:8px" onclick="saveAddress()">Сохранить</button>
+    <button class="add-address-btn" style="margin-top:6px" onclick="document.getElementById('address-form').style.display='none'">Отмена</button>
   </div>
-  <button class="add-address-btn" onclick="alert('Добавить новый адрес')">+ Добавить новый адрес</button>
+  <button class="add-address-btn" id="add-address-btn" onclick="document.getElementById('address-form').style.display='';document.getElementById('address-input').focus()">+ Добавить / изменить адрес</button>
 </div>
 
 <div class="screen" id="screen-payment">
@@ -516,7 +518,7 @@ body{background:var(--page);font-family:var(--font);display:flex;justify-content
     <div class="settings-row" onclick="selectPayMethod('card',this)"><div class="settings-row-left"><div class="settings-row-icon">💳</div><div><div class="settings-row-label">Банковская карта</div><div class="settings-row-sub">**** **** **** 4242</div></div></div><div class="settings-check"></div></div>
     <div class="settings-row" onclick="selectPayMethod('mobile',this)"><div class="settings-row-left"><div class="settings-row-icon">📱</div><div><div class="settings-row-label">Мобильный кошелёк</div><div class="settings-row-sub">Alif, IMON, Корти Милли</div></div></div><div class="settings-check"></div></div>
   </div>
-  <button class="add-address-btn" style="margin-top:10px" onclick="alert('Добавить карту')">+ Добавить карту</button>
+  <button class="add-address-btn" style="margin-top:10px" onclick="goTo('chat-support')">+ Добавить карту (напишите в поддержку)</button>
 </div>
 
 <div class="screen" id="screen-language">
@@ -600,14 +602,30 @@ var currentUser=JSON.parse(localStorage.getItem('sabad_user')||'null');
 
 async function apiRequest(method,path,body,auth){
   var headers={'Content-Type':'application/json'};
-  // Токен добавляем только если он есть И auth не отключён явно
   if(auth!==false&&authToken)headers['Authorization']='Bearer '+authToken;
   var opts={method:method,headers:headers};
   if(body)opts.body=JSON.stringify(body);
   try{
     var r=await fetch(API_URL+path,opts);
     if(r.status===401&&auth!==false){
-      // Только для защищённых запросов редиректим на логин
+      // Пробуем обновить токен
+      var refreshToken=localStorage.getItem('sabad_refresh')||'';
+      if(refreshToken){
+        var rd=await fetch(API_URL+'/auth/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:refreshToken})});
+        if(rd.ok){
+          var rj=await rd.json();
+          authToken=rj.access_token;
+          localStorage.setItem('sabad_token',authToken);
+          if(rj.refresh_token)localStorage.setItem('sabad_refresh',rj.refresh_token);
+          // Повторяем оригинальный запрос
+          headers['Authorization']='Bearer '+authToken;
+          opts.headers=headers;
+          var r2=await fetch(API_URL+path,opts);
+          if(!r2.ok)return null;
+          return await r2.json();
+        }
+      }
+      // Refresh не помог — выходим
       authToken='';localStorage.removeItem('sabad_token');
       return null;
     }
@@ -627,9 +645,114 @@ async function apiLogin(telegramUserId){
   return false;
 }
 
-async function loadMerchants(){
+// Telegram Widget callback — вызывается автоматически после входа
+window.onTelegramAuth=async function(user){
+  var data=await apiRequest('POST','/auth/telegram-widget',{
+    id:user.id,
+    first_name:user.first_name||'',
+    last_name:user.last_name||'',
+    username:user.username||'',
+    photo_url:user.photo_url||'',
+    auth_date:user.auth_date,
+    hash:user.hash
+  },false);
+  if(data&&data.access_token){
+    authToken=data.access_token;
+    localStorage.setItem('sabad_token',authToken);
+    localStorage.setItem('sabad_refresh',data.refresh_token||'');
+    currentUser={id:user.id,name:user.first_name,username:user.username||''};
+    localStorage.setItem('sabad_user',JSON.stringify(currentUser));
+    updateSidebarUser();
+    await loadProfile();
+    await syncCartOnLogin();
+    goTo('home');
+  } else {
+    alert('Ошибка входа. Попробуйте ещё раз.');
+  }
+};
+
+function updateSidebarUser(){
+  if(!currentUser)return;
+  var name=currentUser.name||'Гость';
+  var initials=name.split(' ').map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase()||'?';
+  var sbAvatar=document.getElementById('sb-avatar');
+  var sbName=document.getElementById('sb-name');
+  var sbPhone=document.getElementById('sb-phone');
+  if(sbAvatar)sbAvatar.textContent=initials;
+  if(sbName)sbName.textContent=name;
+  if(sbPhone)sbPhone.textContent=currentUser.phone||'';
+}
+
+async function loadProfile(){
+  if(!authToken)return;
+  var data=await apiRequest('GET','/profile');
+  if(!data)return;
+  var name=data.full_name||(currentUser&&currentUser.name)||'Гость';
+  var phone=data.phone||'Телефон не указан';
+  var initials=name.split(' ').map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase()||'?';
+  // Профиль экран
+  var profAvatar=document.getElementById('prof-avatar');
+  var profName=document.getElementById('prof-name');
+  var profPhone=document.getElementById('prof-phone');
+  if(profAvatar)profAvatar.textContent=initials;
+  if(profName)profName.textContent=name;
+  if(profPhone)profPhone.textContent=phone;
+  // Сайдбар
+  var sbAvatar=document.getElementById('sb-avatar');
+  var sbName=document.getElementById('sb-name');
+  var sbPhone=document.getElementById('sb-phone');
+  if(sbAvatar)sbAvatar.textContent=initials;
+  if(sbName)sbName.textContent=name;
+  if(sbPhone)sbPhone.textContent=phone;
+  // Сохраняем
+  currentUser=Object.assign(currentUser||{},{name:name,phone:phone});
+  localStorage.setItem('sabad_user',JSON.stringify(currentUser));
+  // Подгружаем адрес в поле оформления заказа
+  if(data.address){
+    var coAddr=document.getElementById('co-addr1');
+    if(coAddr&&!coAddr.value)coAddr.value=data.address;
+  }
+}
+
+function logout(){
+  var refresh=localStorage.getItem('sabad_refresh')||'';
+  if(refresh)apiRequest('POST','/auth/logout',{refresh_token:refresh},false);
+  authToken='';
+  currentUser=null;
+  localStorage.removeItem('sabad_token');
+  localStorage.removeItem('sabad_refresh');
+  localStorage.removeItem('sabad_user');
+  localStorage.removeItem('sabad_visited');
+  // Перезагружаем страницу — самый надёжный способ
+  window.location.reload();
+}
+
+function initTelegramWidget(){
+  var wrap=document.getElementById('tg-widget-wrap');
+  if(!wrap)return;
+  var s=document.createElement('script');
+  s.src='https://telegram.org/js/telegram-widget.js?22';
+  s.setAttribute('data-telegram-login','sabad_delbot');
+  s.setAttribute('data-size','large');
+  s.setAttribute('data-onauth','onTelegramAuth(user)');
+  s.setAttribute('data-request-access','write');
+  s.async=true;
+  wrap.appendChild(s);
+}
+
+var merchantsCache=null; // кеш — не перегружаем каждый раз
+var homeFilter='all';   // текущий активный фильтр
+
+async function loadMerchants(forceReload){
   var container=document.getElementById('home-cards');
   if(!container)return;
+
+  // Если данные уже загружены — просто применяем фильтр
+  if(merchantsCache&&!forceReload){
+    applyHomeFilter(homeFilter);
+    return;
+  }
+
   container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text2)">⏳ Загрузка...</div>';
   var data=await apiRequest('GET','/catalog/merchants?type=shop&limit=50');
   var data2=await apiRequest('GET','/catalog/merchants?type=restaurant&limit=50');
@@ -640,10 +763,15 @@ async function loadMerchants(){
     container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text2)">Магазины не найдены</div>';
     return;
   }
+  merchantsCache=all;
   container.innerHTML=all.map(function(m){
     var cat=m.business_type==='shop'?'shop':'food';
     var emoji=m.business_type==='shop'?'🛒':'🍽';
     var tag=m.business_type==='shop'?'<span class="card-tag tag-new">'+tr('home.tag.new')+'</span>':'<span class="card-tag tag-fast">'+tr('home.tag.fast')+'</span>';
+    // Сохраняем в V для поиска
+    var vKey='api_'+m.id;
+    if(!V[vKey])V[vKey]={emoji:emoji,name:m.name,cat:cat,items:[],shopId:m.id,businessType:m.business_type};
+    else{V[vKey].name=m.name;V[vKey].emoji=emoji;}
     return '<div class="card" data-cat="'+cat+'" data-id="'+m.id+'" onclick="openVenueById('+m.id+',\''+m.business_type+'\')">'
       +'<div class="fav-btn" onclick="event.stopPropagation()">♡</div>'
       +'<div class="card-emoji">'+emoji+'</div>'
@@ -651,42 +779,488 @@ async function loadMerchants(){
       +'<div class="card-meta">'+(m.address||'Душанбе')+'</div>'
       +tag+'</div>';
   }).join('');
+  rebuildAllItems();
+  applyHomeFilter(homeFilter);
 }
+
+function applyHomeFilter(cat){
+  homeFilter=cat;
+  document.querySelectorAll('#home-cards .card').forEach(function(c){
+    c.style.display=(cat==='all'||c.dataset.cat===cat)?'':'none';
+  });
+  // Подсвечиваем активную вкладку
+  document.querySelectorAll('#screen-home .tabs .tab').forEach(function(t){
+    var oc=t.getAttribute('onclick')||'';
+    t.classList.toggle('active',oc.indexOf("'"+cat+"'")>-1);
+  });
+}
+
+function filterCards(cat,el){
+  document.querySelectorAll('#screen-home .tabs .tab').forEach(function(t){t.classList.remove('active')});
+  if(el)el.classList.add('active');
+  applyHomeFilter(cat);
+}
+
+var currentShopId=null,currentShopCategories=[],currentShopName='',currentShopType='';
 
 async function openVenueById(shopId,businessType){
-  var cats=await apiRequest('GET','/catalog/'+shopId+'/categories?limit=50');
-  if(!cats||!cats.items||!cats.items.length)return;
-  var catId=cats.items[0].id;
-  var prods=await apiRequest('GET','/catalog/categories/'+catId+'/items?merchant_id='+shopId+'&limit=50');
-  var items=prods&&prods.items?prods.items:[];
-  var key='api_'+shopId;
-  curVenue=key;
-  V[key]={
-    emoji:businessType==='shop'?'🛒':'🍽',
-    name:'Магазин',
-    meta:'Открыто',
-    sec:cats.items[0].name||'Меню',
-    cat:businessType==='shop'?'shop':'food',
-    items:items.map(function(p){return{n:p.name,e:'🛍',p:p.price,id:p.id};})
-  };
-  openVenue(key);
+  currentShopId=shopId;
+  currentShopType=businessType;
+
+  // Показываем экран сразу
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
+  document.getElementById('screen-venue').classList.add('active');
+  TB.forEach(function(t){var b=document.getElementById('tb-'+t);if(b)b.classList.remove('active')});
+  document.getElementById('toolbar').style.display='';
+  document.getElementById('v-menu').innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">⏳ Загрузка меню...</div>';
+  document.getElementById('venue-cat-tabs').innerHTML='';
+
+  // Загружаем категории
+  var catsData=await apiRequest('GET','/catalog/'+shopId+'/categories?limit=100');
+  var cats=catsData&&catsData.items?catsData.items:[];
+
+  if(!cats.length){
+    document.getElementById('v-menu').innerHTML='<div style="padding:40px;text-align:center;color:var(--text2)">Меню пока не добавлено</div>';
+    return;
+  }
+
+  // Загружаем имя магазина из V (уже загружено через loadMerchants) или из категорий
+  var vKeyCheck='api_'+shopId;
+  var shopName=(V[vKeyCheck]&&V[vKeyCheck].name&&!V[vKeyCheck].name.startsWith('Магазин #'))
+    ? V[vKeyCheck].name
+    : (cats[0]&&cats[0].shop_name)||('Магазин #'+shopId);
+  currentShopName=shopName;
+
+  document.getElementById('v-name').textContent=shopName;
+  document.getElementById('v-emoji').textContent=businessType==='restaurant'?'🍽':'🛒';
+  document.getElementById('v-meta').textContent='Открыто';
+  document.getElementById('v-search').textContent=tr('venue.search.prefix')+' '+shopName+'...';
+
+  currentShopCategories=cats;
+
+  // Рендерим вкладки категорий
+  var tabsEl=document.getElementById('venue-cat-tabs');
+  tabsEl.innerHTML=cats.map(function(c,i){
+    return '<div class="cat-tab'+(i===0?' active':'')+'" data-catid="'+c.id+'" onclick="scrollToCategory('+c.id+',this)">'+c.name+'</div>';
+  }).join('');
+
+  // Строим скелет секций
+  var menuEl=document.getElementById('v-menu');
+  menuEl.innerHTML='';
+  cats.forEach(function(cat){
+    var sec=document.createElement('div');
+    sec.id='cat-sec-'+cat.id;
+    sec.innerHTML='<div class="cat-section-title">'+cat.name+'</div>'
+      +'<div class="menu-items-list" id="cat-items-'+cat.id+'">'
+      +'<div style="padding:14px 0;color:var(--text2);font-size:13px;text-align:center">⏳</div>'
+      +'</div>';
+    menuEl.appendChild(sec);
+  });
+
+  // Инициализируем V для этого магазина
+  var vKey='api_'+shopId;
+  if(!V[vKey])V[vKey]={emoji:businessType==='restaurant'?'🍽':'🛒',name:shopName,cat:businessType==='restaurant'?'food':'shop',items:[]};
+  else V[vKey].name=shopName;
+
+  // Загружаем товары по каждой категории параллельно
+  var loadedCount=0;
+  cats.forEach(function(cat){
+    apiRequest('GET','/catalog/categories/'+cat.id+'/items?merchant_id='+shopId+'&limit=100')
+      .then(function(prods){
+        var items=prods&&prods.items?prods.items:[];
+        var listEl=document.getElementById('cat-items-'+cat.id);
+        if(!listEl)return;
+        if(!items.length){
+          listEl.innerHTML='<div style="padding:10px 0;color:var(--text2);font-size:13px">Нет товаров</div>';
+        } else {
+          listEl.innerHTML=items.map(function(p){
+            var key='api_'+p.id;
+            var qty=cart[key]?cart[key].qty:0;
+            return renderMenuItem(key,p,shopId,qty);
+          }).join('');
+          // Сохраняем в V для поиска
+          items.forEach(function(p){
+            if(!V[vKey].items.find(function(x){return x.id===p.id;})){
+              V[vKey].items.push({n:p.name,e:'🛍',p:p.price,id:p.id,shopId:shopId});
+            }
+          });
+        }
+        loadedCount++;
+        // После загрузки всех категорий — показываем только первую
+        if(loadedCount===cats.length){
+          rebuildAllItems();
+          // Показываем только первую категорию по умолчанию
+          if(cats.length>0){
+            document.querySelectorAll('[id^="cat-sec-"]').forEach(function(sec,i){
+              sec.style.display=i===0?'':'none';
+            });
+          }
+        }
+      })
+      .catch(function(){
+        var listEl=document.getElementById('cat-items-'+cat.id);
+        if(listEl)listEl.innerHTML='<div style="padding:10px 0;color:var(--text2);font-size:13px">Ошибка загрузки</div>';
+        loadedCount++;
+        if(loadedCount===cats.length){rebuildAllItems();}
+      });
+  });
 }
 
-var V={
-  pizza:    {emoji:'🍕',name:'Pizza House', meta:'25–35 мин · от 15 сом · Открыто',sec:'Пицца',   cat:'food',  items:[{n:'Маргарита',e:'🍕',p:28},{n:'Пепперони',e:'🍕',p:35},{n:'Кола 0.5л',e:'🥤',p:8},{n:'Тирамису',e:'🍮',p:18}]},
-  magnit:   {emoji:'🛒',name:'Магнит',     meta:'20–30 мин · от 0 сом · Открыто', sec:'Продукты', cat:'shop',  items:[{n:'Молоко 1л',e:'🥛',p:6},{n:'Хлеб',e:'🍞',p:3},{n:'Яйца × 10',e:'🥚',p:12},{n:'Масло',e:'🧈',p:15}]},
-  samarkand:{emoji:'🍜',name:'Самарканд',  meta:'30–45 мин · от 10 сом · Открыто',sec:'Меню',     cat:'food',  items:[{n:'Плов',e:'🍚',p:25},{n:'Шашлык',e:'🍢',p:30},{n:'Мастава',e:'🍲',p:20},{n:'Лепёшка',e:'🫓',p:5}]},
-  apteka:   {emoji:'💊',name:'Аптека 36.6',meta:'15–25 мин · от 0 сом · Открыто', sec:'Препараты',cat:'pharma',items:[{n:'Парацетамол',e:'💊',p:4},{n:'Витамин C',e:'🟡',p:12},{n:'Бинт',e:'🩹',p:3},{n:'Ибупрофен',e:'💊',p:7}]}
-};
-var cart={},favs={samarkand:true,apteka:true},curVenue=null,selPayMethod='cash',sCat='all',DFEE=5,promo=null,darkMode=false;
+function renderMenuItem(key,p,shopId,qty){
+  var qtyHtml=qty>0
+    ?'<div style="display:flex;align-items:center;gap:6px"><button class="qty-btn" onclick="chgQtyApi(\''+key+'\','+p.id+','+shopId+',-1)">−</button><span class="qty-val" id="qv-'+key+'">'+qty+'</span><button class="qty-btn" onclick="chgQtyApi(\''+key+'\','+p.id+','+shopId+',1)">+</button></div>'
+    :'<button class="add-btn" id="ab-'+key+'" onclick="addCartApi(\''+key+'\','+p.id+','+shopId+',this)">+</button>';
+  var photoHtml=p.photo_url?'<img src="'+p.photo_url+'" style="width:60px;height:60px;border-radius:8px;object-fit:cover;flex-shrink:0" onerror="this.style.display=\'none\'">':'<span style="font-size:28px;flex-shrink:0">🛍</span>';
+  return '<div class="menu-item" id="mi-'+key+'">'
+    +'<div class="menu-item-left">'+photoHtml+'<div style="flex:1;min-width:0"><span class="menu-item-name">'+p.name+'</span>'+(p.description?'<div style="font-size:11px;color:var(--text2);margin-top:2px;line-height:1.3;white-space:normal">'+p.description.substring(0,60)+(p.description.length>60?'...':'')+'</div>':'')+'</div></div>'
+    +'<div style="display:flex;align-items:center;gap:9px"><span class="menu-item-price">'+p.price+' '+tr('currency')+'</span>'+qtyHtml+'</div>'
+    +'</div>';
+}
+
+async function addCartApi(key,productId,shopId,btn){
+  var qty=1;
+  if(cart[key]){cart[key].qty++;qty=cart[key].qty;}
+  else{
+    // Находим данные товара
+    var vKey='api_'+shopId;
+    var item=(V[vKey]&&V[vKey].items||[]).find(function(x){return x.id===productId;})||{n:'Товар',e:'🛍',p:0};
+    cart[key]={name:item.n,emoji:item.e,price:item.p,qty:1,id:productId,shopId:shopId,vid:vKey};
+  }
+  saveCart();updBadge();
+  // Обновляем кнопку
+  var mi=document.getElementById('mi-'+key);
+  if(mi){
+    var priceEl=mi.querySelector('.menu-item-price');
+    var btnWrap=priceEl?priceEl.parentNode:null;
+    if(btnWrap){
+      btnWrap.innerHTML='<span class="menu-item-price">'+cart[key].price+' '+tr('currency')+'</span><div style="display:flex;align-items:center;gap:6px"><button class="qty-btn" onclick="chgQtyApi(\''+key+'\','+productId+','+shopId+',-1)">−</button><span class="qty-val" id="qv-'+key+'">'+cart[key].qty+'</span><button class="qty-btn" onclick="chgQtyApi(\''+key+'\','+productId+','+shopId+',1)">+</button></div>';
+    }
+  }
+  // Синхронизируем с сервером (не ждём)
+  serverCartUpsert(productId,cart[key].qty);
+}
+
+async function chgQtyApi(key,productId,shopId,d){
+  if(!cart[key])return;
+  cart[key].qty+=d;
+  var newQty=cart[key].qty;
+  if(newQty<=0){
+    delete cart[key];
+    // Обновляем кнопку обратно на "+"
+    var mi=document.getElementById('mi-'+key);
+    if(mi){
+      var priceEl=mi.querySelector('.menu-item-price');
+      var price=priceEl?priceEl.textContent.split(' ')[0]:'0';
+      var btnWrap=priceEl?priceEl.parentNode:null;
+      if(btnWrap){
+        // Находим цену товара
+        var vKey='api_'+shopId;
+        var item=(V[vKey]&&V[vKey].items||[]).find(function(x){return x.id===productId;})||{p:parseFloat(price)};
+        btnWrap.innerHTML='<span class="menu-item-price">'+item.p+' '+tr('currency')+'</span><button class="add-btn" id="ab-'+key+'" onclick="addCartApi(\''+key+'\','+productId+','+shopId+',this)">+</button>';
+      }
+    }
+    saveCart();updBadge();
+    serverCartUpsert(productId,0);
+    return;
+  }
+  saveCart();updBadge();
+  var el=document.getElementById('qv-'+key);
+  if(el)el.textContent=newQty;
+  serverCartUpsert(productId,newQty);
+}
+
+function scrollToCategory(catId,tabEl){
+  // Обновляем активную вкладку
+  document.querySelectorAll('.cat-tab').forEach(function(t){t.classList.remove('active')});
+  if(tabEl)tabEl.classList.add('active');
+  // Показываем только выбранную секцию
+  document.querySelectorAll('[id^="cat-sec-"]').forEach(function(sec){
+    sec.style.display=sec.id==='cat-sec-'+catId?'':'none';
+  });
+  // Скроллим наверх экрана заведения
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function showAllCategories(){
+  document.querySelectorAll('[id^="cat-sec-"]').forEach(function(sec){
+    sec.style.display='';
+  });
+}
+
+function setupScrollSpy(){
+  // Убираем scroll-spy — он конфликтует со скроллом
+  // Вместо него используем простую навигацию через scrollToCategory
+}
+
+var V={};
+var cart={},favs={},curVenue=null,selPayMethod='cash',sCat='all',DFEE=5,promo=null,darkMode=false;
+// Восстанавливаем корзину из localStorage (fallback до загрузки с сервера)
+try{var _sc=localStorage.getItem('sabad_cart');if(_sc)cart=JSON.parse(_sc);}catch(e){}
+
+// ============================================================
+// СЕРВЕРНАЯ КОРЗИНА
+// ============================================================
+var cartSyncing=false;
+
+async function serverCartGet(){
+  if(!authToken)return null;
+  var data=await apiRequest('GET','/cart');
+  return data;
+}
+
+async function serverCartUpsert(productId,quantity){
+  if(!authToken)return;
+  await apiRequest('POST','/cart/item',{product_id:productId,quantity:quantity});
+}
+
+async function serverCartClear(){
+  if(!authToken)return;
+  await apiRequest('DELETE','/cart');
+}
+
+// При входе — синхронизировать локальную корзину с сервером
+async function syncCartOnLogin(){
+  if(!authToken)return;
+  // Строим список из локальной корзины
+  var localItems=[];
+  Object.values(cart).forEach(function(it){
+    if(it.id&&it.qty>0)localItems.push({product_id:it.id,quantity:it.qty});
+  });
+  var data=await apiRequest('POST','/cart/sync',{items:localItems});
+  if(data&&data.items){
+    // Загружаем серверную корзину в локальный объект
+    await loadServerCart(data.items);
+  }
+}
+
+async function loadServerCart(serverItems){
+  if(!serverItems)return;
+  // Сбрасываем локальную корзину
+  cart={};
+  serverItems.forEach(function(si){
+    var key='api_'+si.product_id;
+    cart[key]={
+      name:si.name||'Товар',
+      emoji:'🛍',
+      price:parseFloat(si.price||0),
+      qty:parseInt(si.quantity||1),
+      id:si.product_id,
+      shopId:si.shop_id||null,
+      vid:'api_'+si.shop_id
+    };
+  });
+  saveCart();
+  updBadge();
+}
+
+function saveCart(){try{localStorage.setItem('sabad_cart',JSON.stringify(cart));}catch(e){}}
 var TB=['home','orders','cart','profile'],HIDE=['onboard','success'];
 var supMsgs=[{t:'Здравствуйте! Чем могу помочь? 😊',out:false,time:'13:01'},{t:'Напишите номер заказа — и я сразу помогу.',out:false,time:'13:01'}];
 var ocMsgs={};
 var supReplies={'Где мой заказ?':'Ваш заказ #1042 сейчас в пути 🛵','Хочу отменить заказ':'Для отмены потребуется подтверждение. Вы уверены?','Проблема с оплатой':'Уточните способ оплаты.'};
 var ocReplies={'Можно без лука?':'Конечно! 👍','Не очень острое, пожалуйста':'Хорошо 🌶️','Когда будет готово?':'Примерно через 15 минут ⏱'};
-var GEMINI_KEY='AIzaSyBy5M68EZtj0nNtSBo-uEm1eJjGVdbnHpc';
 var yovarHistory=[];
-var SYSTEM_PROMPT='Ты Ёвар — помощник доставки Сабад (Душанбе). Отвечай кратко 1-3 предложения. Язык пользователя (ru/tg/uz). БЕЗ markdown, БЕЗ звёздочек, только простой текст.\nЕсли пользователь хочет добавить конкретный товар→ACTION:ADD:venueKey:itemName\nЕсли ищет по описанию (дёшево, вкусно, до N сом)→ACTION:SEARCH:запрос\nКаталог:\npizza:Маргарита/28,Пепперони/35,Кола/8,Тирамису/18\nmagnit:Молоко/6,Хлеб/3,Яйца/12,Масло/15\nsamarkand:Плов/25,Шашлык/30,Мастава/20,Лепёшка/5\napteka:Парацетамол/4,ВитаминC/12,Бинт/3,Ибупрофен/7';
+var SYSTEM_PROMPT_BASE='Ты Ёвар — помощник доставки Сабад (Душанбе). Отвечай только на приветствия и вопросы про сервис. 1 предложение, без markdown.';
+
+function buildSystemPrompt(){return SYSTEM_PROMPT_BASE;}
+
+function isGreeting(text){
+  var t=text.toLowerCase().trim().replace(/[!?.,]/g,'');
+  var list=['привет','салом','hello','hi','хай','здравствуй','добрый день','добрый вечер','доброе утро',
+    'спасибо','рахмат','ташаккур','ok','ок','окей','хорошо','понятно','ясно','да','нет','пока',
+    'до свидания','как дела','что умеешь','помоги','кто ты','что ты'];
+  return list.some(function(g){return t===g;});
+}
+
+// Поиск через API /search (оба типа параллельно)
+async function apiSearch(query){
+  try{
+    var responses=await Promise.all([
+      apiRequest('GET','/search?q='+encodeURIComponent(query)+'&type=shop&limit=5'),
+      apiRequest('GET','/search?q='+encodeURIComponent(query)+'&type=restaurant&limit=5')
+    ]);
+    var results=[];
+    responses.forEach(function(r){if(r&&r.items)results=results.concat(r.items);});
+    return results;
+  }catch(e){return [];}
+}
+
+// Показываем карточки товаров в чате
+function showProductCards(results, msgDiv, prefixText){
+  if(prefixText){
+    msgDiv.textContent=prefixText;
+    msgDiv.style.fontStyle='normal';
+    msgDiv.style.color='var(--text)';
+  }
+  results.slice(0,4).forEach(function(it){
+    var wrap=document.createElement('div');
+    wrap.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-top:8px;background:var(--bg);border:.5px solid var(--border);border-radius:10px;padding:9px 12px;gap:8px';
+    var info=document.createElement('div');
+    info.style.cssText='flex:1;min-width:0';
+    info.innerHTML='<div style="font-size:14px;font-weight:500;color:var(--text)">'+it.name+'</div>'
+      +'<div style="font-size:12px;color:var(--text2);margin-top:1px">'+(it.merchant_name||it.shop_name||'')+'</div>';
+    var btn=document.createElement('button');
+    btn.className='modal-action-btn';
+    btn.style.cssText='white-space:nowrap;flex-shrink:0;font-size:13px';
+    btn.textContent='+ '+(it.price||0)+' '+tr('currency');
+    btn.onclick=(function(item){return function(){
+      var pid=item.id||item.product_id;
+      var key='api_'+(pid||('r'+Math.random()));
+      if(!cart[key])cart[key]={name:item.name,emoji:'🛍',price:item.price||0,qty:1,id:pid,shopId:item.shop_id,vid:'api_'+item.shop_id};
+      else cart[key].qty++;
+      if(pid)serverCartUpsert(pid,cart[key].qty);
+      updBadge();saveCart();
+      this.textContent='✓ В корзине';
+      this.style.background='#1D9E75';this.style.color='#fff';
+      this.onclick=null;
+    };})(it);
+    wrap.appendChild(info);wrap.appendChild(btn);
+    msgDiv.appendChild(wrap);
+  });
+  document.getElementById('modal-msgs').scrollTop=999999;
+}
+
+function yovarSend(){
+  var inp=document.getElementById('yovar-inp'),text=inp.value.trim();
+  if(!text)return;inp.value='';
+  addMsg(text,true);
+  yovarHistory.push({role:'user',content:text});
+  if(yovarHistory.length>16)yovarHistory=yovarHistory.slice(-16);
+
+  // Приветствие — Mistral отвечает коротко
+  if(isGreeting(text)){
+    var typing=addMsg(tr('yovar.typing'),false);
+    typing.style.fontStyle='italic';typing.style.color='var(--text2)';
+    fetch(API_URL+'/yovar',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:[{role:'system',content:SYSTEM_PROMPT_BASE},{role:'user',content:text}]})
+    })
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(data){
+      typing.remove();
+      var reply=data&&data.reply?data.reply.replace(/\*\*/g,'').replace(/\*/g,'').trim():'Чем могу помочь?';
+      yovarHistory.push({role:'assistant',content:reply});
+      addMsg(reply,false);
+      document.getElementById('modal-msgs').scrollTop=999999;
+    })
+    .catch(function(){typing.remove();addMsg('Чем могу помочь?',false);});
+    return;
+  }
+
+  // КАСКАДНЫЙ ПОИСК
+  var msgDiv=addMsg('🔍 Ищу «'+text+'»...',false);
+  msgDiv.style.color='var(--text2)';msgDiv.style.fontStyle='italic';
+
+  // Шаг 1: прямой поиск в PostgreSQL
+  apiSearch(text).then(function(results){
+
+    if(results.length===1){
+      // Ровно 1 результат — показываем карточку без Ёвара
+      msgDiv.textContent='Нашёл:';
+      msgDiv.style.fontStyle='normal';msgDiv.style.color='var(--text)';
+      showProductCards(results,msgDiv,'');
+      yovarHistory.push({role:'assistant',content:'Нашёл: '+results[0].name});
+      return;
+    }
+
+    if(results.length>1){
+      // Несколько результатов — Ёвар пишет текст
+      fetch(API_URL+'/yovar/correct',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({query:text,results_count:results.length,results:results.slice(0,4)})
+      })
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(d){
+        var txt=(d&&d.text)?d.text:('Нашёл '+results.length+' вариант(а):');
+        showProductCards(results,msgDiv,txt);
+        yovarHistory.push({role:'assistant',content:txt});
+      })
+      .catch(function(){
+        showProductCards(results,msgDiv,'Нашёл '+results.length+' вариант(а):');
+      });
+      return;
+    }
+
+    // Шаг 2: не нашли — Ёвар исправляет запрос
+    msgDiv.textContent='🤔 Не нашёл «'+text+'», спрашиваю Ёвара...';
+    fetch(API_URL+'/yovar/correct',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query:text,results_count:0})
+    })
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(d){
+      if(!d||d.action==='not_found'||!d.corrected){
+        msgDiv.textContent='«'+text+'» не найдено в каталоге.';
+        msgDiv.style.color='var(--text2)';msgDiv.style.fontStyle='normal';
+        yovarHistory.push({role:'assistant',content:'Не найдено: '+text});
+        return;
+      }
+
+      var corrected=d.corrected;
+      var similar=d.similar||[];
+      msgDiv.textContent='🔍 Ищу «'+corrected+'»...';
+
+      // Шаг 3: повторный поиск с исправленным запросом
+      apiSearch(corrected).then(function(results2){
+        if(results2.length>0){
+          // Нашли — показываем карточки
+          if(results2.length===1){
+            showProductCards(results2,msgDiv,'Нашёл по запросу «'+corrected+'»:');
+            yovarHistory.push({role:'assistant',content:'Нашёл: '+results2[0].name});
+          } else {
+            fetch(API_URL+'/yovar/correct',{method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({query:corrected,results_count:results2.length,results:results2.slice(0,4)})
+            })
+            .then(function(r){return r.ok?r.json():null;})
+            .then(function(d2){
+              var txt=(d2&&d2.text)?d2.text:('Нашёл по запросу «'+corrected+'»:');
+              showProductCards(results2,msgDiv,txt);
+              yovarHistory.push({role:'assistant',content:txt});
+            })
+            .catch(function(){showProductCards(results2,msgDiv,'Нашёл по запросу «'+corrected+'»:');});
+          }
+          return;
+        }
+
+        // Не нашли по исправленному — ищем по similar
+        if(similar.length>0){
+          msgDiv.textContent='🔍 Ищу похожее: '+similar.join(', ')+'...';
+          var similarResults=[];
+          var done=0;
+          similar.forEach(function(s){
+            apiSearch(s).then(function(r){
+              similarResults=similarResults.concat(r);
+              done++;
+              if(done===similar.length){
+                // Убираем дубли
+                var seen={};
+                similarResults=similarResults.filter(function(it){
+                  var k=(it.id||it.product_id)+'';
+                  if(seen[k])return false;seen[k]=true;return true;
+                });
+                if(similarResults.length>0){
+                  showProductCards(similarResults,msgDiv,'«'+corrected+'» нет, но есть похожее:');
+                  yovarHistory.push({role:'assistant',content:'Показал похожие товары'});
+                } else {
+                  msgDiv.textContent='«'+text+'» не найдено в каталоге.';
+                  msgDiv.style.color='var(--text2)';msgDiv.style.fontStyle='normal';
+                  yovarHistory.push({role:'assistant',content:'Не найдено: '+text});
+                }
+              }
+            });
+          });
+          return;
+        }
+
+        // Совсем ничего
+        msgDiv.textContent='«'+text+'» не найдено в каталоге.';
+        msgDiv.style.color='var(--text2)';msgDiv.style.fontStyle='normal';
+        yovarHistory.push({role:'assistant',content:'Не найдено: '+text});
+      });
+    })
+    .catch(function(){
+      msgDiv.textContent='«'+text+'» не найдено в каталоге.';
+      msgDiv.style.color='var(--text2)';msgDiv.style.fontStyle='normal';
+    });
+  });
+}
 
 function goTo(tab){
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
@@ -697,6 +1271,8 @@ function goTo(tab){
   if(tab==='orders')renderOrders();
   if(tab==='favourites')renderFavs();
   if(tab==='home')loadMerchants();
+  if(tab==='profile')loadProfile();
+  if(tab==='addresses')loadAddresses();
   if(tab==='search'){var si=document.getElementById('search-inp');if(si){si.value='';doSearch('');}}
 }
 window.openSB=function(){document.getElementById('sidebar').classList.add('open');document.getElementById('sbOverlay').classList.add('open')}
@@ -710,14 +1286,20 @@ function renderFavs(){
 }
 function openVenue(id){
   curVenue=id;var v=V[id];
+  if(!v)return;
+  if(id.startsWith('api_')){
+    var shopId=parseInt(id.replace('api_',''));
+    openVenueById(shopId,v.cat==='food'?'restaurant':'shop');
+    return;
+  }
   document.getElementById('v-emoji').textContent=v.emoji;
   document.getElementById('v-name').textContent=v.name;
-  document.getElementById('v-meta').textContent=v.meta;
+  document.getElementById('v-meta').textContent=v.meta||'Открыто';
   document.getElementById('v-search').textContent=tr('venue.search.prefix')+' '+v.name+'...';
-  document.getElementById('v-section').textContent=v.sec;
+  document.getElementById('venue-cat-tabs').innerHTML='';
   document.getElementById('v-menu').innerHTML=v.items.map(function(item,i){
     var key=id+'_'+i,qty=cart[key]?cart[key].qty:0;
-    return'<div class="menu-item"><div class="menu-item-left"><span style="font-size:19px">'+item.e+'</span><span class="menu-item-name">'+item.n+'</span></div><div style="display:flex;align-items:center;gap:9px"><span class="menu-item-price">'+item.p+' '+tr('currency')+'</span>'+(qty>0?'<div style="display:flex;align-items:center;gap:6px"><button class="qty-btn" onclick="chgQty(\''+key+'\',\''+id+'\','+i+',-1)">−</button><span class="qty-val" id="qv-'+key+'">'+qty+'</span><button class="qty-btn" onclick="chgQty(\''+key+'\',\''+id+'\','+i+',1)">+</button></div>':'<button class="add-btn" id="ab-'+key+'" onclick="addCart(\''+key+'\',\''+id+'\','+i+')">+</button>')+'</div></div>';
+    return'<div class="menu-item" id="mi-'+key+'"><div class="menu-item-left"><span style="font-size:19px">'+item.e+'</span><span class="menu-item-name">'+item.n+'</span></div><div style="display:flex;align-items:center;gap:9px"><span class="menu-item-price">'+item.p+' '+tr('currency')+'</span>'+(qty>0?'<div style="display:flex;align-items:center;gap:6px"><button class="qty-btn" onclick="chgQty(\''+key+'\',\''+id+'\','+i+',-1)">−</button><span class="qty-val" id="qv-'+key+'">'+qty+'</span><button class="qty-btn" onclick="chgQty(\''+key+'\',\''+id+'\','+i+',1)">+</button></div>':'<button class="add-btn" id="ab-'+key+'" onclick="addCart(\''+key+'\',\''+id+'\','+i+')">+</button>')+'</div></div>';
   }).join('');
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
   document.getElementById('screen-venue').classList.add('active');
@@ -725,14 +1307,23 @@ function openVenue(id){
   document.getElementById('toolbar').style.display='';
 }
 function addCart(key,vid,idx){
-  var item=V[vid].items[idx];cart[key]={name:item.n,emoji:item.e,price:item.p,qty:1,vid:vid};updBadge();
+  var item=V[vid].items[idx];
+  cart[key]={name:item.n,emoji:item.e,price:item.p,qty:1,vid:vid,id:item.id||0,shopId:item.shopId||null};
+  updBadge();saveCart();
   var btn=document.getElementById('ab-'+key);
   if(btn){btn.parentNode.innerHTML='<div style="display:flex;align-items:center;gap:6px"><button class="qty-btn" onclick="chgQty(\''+key+'\',\''+vid+'\','+idx+',-1)">−</button><span class="qty-val" id="qv-'+key+'">1</span><button class="qty-btn" onclick="chgQty(\''+key+'\',\''+vid+'\','+idx+',1)">+</button></div>';}
+  if(item.id)serverCartUpsert(item.id,1);
 }
 function chgQty(key,vid,idx,d){
   if(!cart[key])return;cart[key].qty+=d;
-  if(cart[key].qty<=0){delete cart[key];updBadge();openVenue(vid);return;}
-  var e=document.getElementById('qv-'+key);if(e)e.textContent=cart[key].qty;updBadge();
+  var id=cart[key].id;
+  if(cart[key].qty<=0){
+    delete cart[key];updBadge();saveCart();
+    if(id)serverCartUpsert(id,0);
+    openVenue(vid);return;
+  }
+  var e=document.getElementById('qv-'+key);if(e)e.textContent=cart[key].qty;updBadge();saveCart();
+  if(id)serverCartUpsert(id,cart[key].qty);
 }
 function updBadge(){var n=Object.values(cart).reduce(function(s,i){return s+i.qty},0);var b=document.getElementById('cart-badge');b.style.display=n>0?'flex':'none';b.textContent=n;}
 function cartTotal(){return Object.values(cart).reduce(function(s,i){return s+i.price*i.qty},0)}
@@ -746,9 +1337,9 @@ function renderCart(){
   var sum='<div class="cart-row"><span>'+tr('cart.goods')+'</span><span>'+sub+' '+cur+'</span></div>'+(disc>0?'<div class="cart-row" style="color:#085041"><span>'+tr('cart.discount')+'</span><span>−'+disc+' '+cur+'</span></div>':'')+'<div class="cart-row"><span>'+tr('cart.delivery')+'</span><span>'+(df===0?tr('cart.free'):df+' '+cur)+'</span></div><div class="cart-row"><span>'+tr('cart.total')+'</span><span>'+tot+' '+cur+'</span></div>';
   el.innerHTML='<div style="margin-bottom:14px">'+items+'</div>'+promoHtml+'<div class="checkout-label" style="margin-bottom:7px">'+tr('cart.comment.label')+'</div><textarea class="comment-box" id="order-comment" rows="3" placeholder="'+tr('cart.comment.ph')+'"></textarea><div class="cart-summary">'+sum+'</div><button class="btn-primary" onclick="goToCheckout()">'+tr('cart.order.btn')+'</button>';
 }
-function cartChg(key,d){if(!cart[key])return;cart[key].qty+=d;if(cart[key].qty<=0)delete cart[key];updBadge();renderCart();}
+function cartChg(key,d){if(!cart[key])return;cart[key].qty+=d;if(cart[key].qty<=0)delete cart[key];updBadge();saveCart();renderCart();}
 function cartPromo(){var v=(document.getElementById('cart-promo')||{}).value||'';applyCode(v.trim().toUpperCase());}
-function applyCode(c){var ok=['SABAD20','OSH15','APTEKA0'];if(ok.indexOf(c)>-1){promo=c;renderCart();}else alert(tr('cart.promo.notfound'));}
+function applyCode(c){var ok=['SABAD20','OSH15','APTEKA0'];if(ok.indexOf(c)>-1){promo=c;renderCart();}else{var fb=document.getElementById('cart-promo');if(fb){fb.style.border='1px solid #c0392b';setTimeout(function(){fb.style.border='';},1500);}}}
 function removePromo(){promo=null;renderCart();}
 function goToCheckout(){
   if(!authToken){
@@ -758,20 +1349,90 @@ function goToCheckout(){
   var sub=cartTotal(),disc=promo==='SABAD20'?Math.round(sub*.2):(promo==='OSH15'?15:0),df=promo==='APTEKA0'?0:DFEE,tot=sub-disc+df;
   var cur=tr('currency');
   document.getElementById('co-summary').innerHTML='<div class="cart-row"><span>'+tr('cart.goods')+'</span><span>'+sub+' '+cur+'</span></div>'+(disc>0?'<div class="cart-row" style="color:#085041"><span>'+tr('cart.discount')+'</span><span>−'+disc+' '+cur+'</span></div>':'')+'<div class="cart-row"><span>'+tr('cart.delivery')+'</span><span>'+(df===0?tr('cart.free'):df+' '+cur)+'</span></div><div class="cart-row"><span>'+tr('cart.total')+'</span><span>'+tot+' '+cur+'</span></div>';
+  // Заполняем адрес из профиля если поле пустое
+  if(authToken){
+    apiRequest('GET','/profile').then(function(p){
+      if(p&&p.address){
+        var f=document.getElementById('co-addr1');
+        if(f&&!f.value)f.value=p.address;
+      }
+    });
+  }
   goTo('checkout');
 }
 function selPay(m){selPayMethod=m;['cash','card','mobile'].forEach(function(x){document.getElementById('pay-'+x).classList.toggle('selected',x===m)});}
-function placeOrder(){cart={};promo=null;updBadge();goTo('success');}
 function copyCode(c,el){promo=c;var cp=el.querySelector('.promo-copied');cp.classList.add('show');setTimeout(function(){cp.classList.remove('show')},2000);}
 function applyPromo(){var v=document.getElementById('manual-promo').value.trim().toUpperCase(),fb=document.getElementById('promo-fb'),ok=['SABAD20','OSH15','APTEKA0'];if(ok.indexOf(v)>-1){promo=v;fb.style.color='#085041';fb.textContent=tr('cart.promo.applied')+' '+v+' '+tr('cart.promo.applied2');}else{fb.style.color='#c0392b';fb.textContent=tr('promos.notfound');}}
 var allItems=[];
-Object.keys(V).forEach(function(vid){var v=V[vid];v.items.forEach(function(it,i){allItems.push({name:it.n,emoji:it.e,price:it.p,venue:v.name,vEmoji:v.emoji,cat:v.cat,vid:vid});});allItems.push({name:v.name,emoji:v.emoji,price:null,venue:'Заведение',vEmoji:'',cat:v.cat,vid:vid,isV:true});});
+function rebuildAllItems(){
+  allItems=[];
+  Object.keys(V).forEach(function(vid){
+    var v=V[vid];
+    if(!v||!v.items)return;
+    v.items.forEach(function(it,i){
+      allItems.push({name:it.n,emoji:it.e||'🛍',price:it.p,venue:v.name,vEmoji:v.emoji,cat:v.cat,vid:vid,idx:i,id:it.id});
+    });
+    allItems.push({name:v.name,emoji:v.emoji,price:null,venue:'Заведение',vEmoji:'',cat:v.cat,vid:vid,isV:true});
+  });
+}
 function sFilter(cat,el){sCat=cat;document.querySelectorAll('#s-tabs .tab').forEach(function(t){t.classList.remove('active')});el.classList.add('active');doSearch(document.getElementById('search-inp').value);}
-function doSearch(q){
+async function doSearch(q){
   var res=document.getElementById('s-results');
-  var f=allItems.filter(function(it){return(sCat==='all'||it.cat===sCat)&&(!q||it.name.toLowerCase().indexOf(q.toLowerCase())>-1||it.venue.toLowerCase().indexOf(q.toLowerCase())>-1)});
-  if(!f.length){res.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--text2)">'+tr('search.notfound')+'</div>';return;}
-  res.innerHTML=f.map(function(it){return'<div class="sri" onclick="openVenue(\''+it.vid+'\')"><div class="sri-emoji">'+(it.isV?it.emoji:it.vEmoji||it.emoji)+'</div><div style="flex:1"><div class="sri-name">'+it.name+'</div><div class="sri-meta">'+(it.isV?tr('search.venue'):it.venue)+'</div></div>'+(it.price!==null?'<div class="sri-price">'+it.price+' '+tr('currency')+'</div>':'')+'</div>';}).join('');
+  if(!q||q.length<2){res.innerHTML='';return;}
+  res.innerHTML='<div style="padding:20px;text-align:center;color:var(--text2)">⏳ Поиск...</div>';
+
+  // Определяем типы для поиска
+  var types=[];
+  if(sCat==='all')types=['shop','restaurant'];
+  else if(sCat==='food')types=['restaurant'];
+  else if(sCat==='shop')types=['shop'];
+  else types=['shop','restaurant'];
+
+  // Ищем через API /search по каждому типу
+  var apiResults=[];
+  try{
+    var promises=types.map(function(type){
+      return apiRequest('GET','/search?q='+encodeURIComponent(q)+'&type='+type+'&limit=20');
+    });
+    var responses=await Promise.all(promises);
+    responses.forEach(function(sr){
+      if(sr&&sr.items)apiResults=apiResults.concat(sr.items);
+    });
+  }catch(e){}
+
+  if(apiResults.length){
+    res.innerHTML=apiResults.map(function(it){
+      return'<div class="sri" onclick="openVenueById('+(it.shop_id||0)+',\''+(it.business_type||'shop')+'\')">'
+        +'<div class="sri-emoji">'+(it.business_type==='restaurant'?'🍽':'🛒')+'</div>'
+        +'<div style="flex:1"><div class="sri-name">'+it.name+'</div>'
+        +'<div class="sri-meta">'+(it.merchant_name||it.shop_name||'Магазин')+'</div></div>'
+        +(it.price!=null?'<div class="sri-price">'+it.price+' '+tr('currency')+'</div>':'')
+        +'</div>';
+    }).join('');
+    return;
+  }
+
+  // Fallback — локальный поиск по V (загруженные магазины)
+  rebuildAllItems();
+  var ql=q.toLowerCase();
+  var f=allItems.filter(function(it){
+    return(sCat==='all'||it.cat===sCat||
+          (sCat==='food'&&it.cat==='food')||
+          (sCat==='shop'&&it.cat==='shop'))
+      &&(it.name.toLowerCase().indexOf(ql)>-1||(it.venue&&it.venue.toLowerCase().indexOf(ql)>-1));
+  });
+  if(!f.length){
+    res.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--text2)">'+tr('search.notfound')+'</div>';
+    return;
+  }
+  res.innerHTML=f.map(function(it){
+    return'<div class="sri" onclick="openVenue(\''+it.vid+'\')">'
+      +'<div class="sri-emoji">'+(it.isV?it.emoji:it.vEmoji||it.emoji)+'</div>'
+      +'<div style="flex:1"><div class="sri-name">'+it.name+'</div>'
+      +'<div class="sri-meta">'+(it.isV?tr('search.venue'):it.venue)+'</div></div>'
+      +(it.price!=null?'<div class="sri-price">'+it.price+' '+tr('currency')+'</div>':'')
+      +'</div>';
+  }).join('');
 }
 function supSend(txt){
   var inp=document.getElementById('sup-inp');var text=txt||inp.value.trim();if(!text)return;if(!txt)inp.value='';
@@ -781,15 +1442,14 @@ function supSend(txt){
   setTimeout(function(){supMsgs.push({t:rep,out:false,time:t});renderSupChat();},900);
 }
 function renderSupChat(){var el=document.getElementById('sup-msgs');el.innerHTML=supMsgs.map(function(m){return'<div class="msg '+(m.out?'out':'in')+'">'+m.t+'<div class="msg-time">'+m.time+'</div></div>';}).join('');el.scrollTop=el.scrollHeight;}
-function openOrderChat(vid,orderNum){
-  var v=V[vid];
-  document.getElementById('oc-av').textContent=v.emoji;
-  document.getElementById('oc-name').textContent=v.name;
-  document.getElementById('oc-info').innerHTML='Заказ <strong>'+orderNum+'</strong> · <strong>'+v.name+'</strong>';
-  if(!ocMsgs[orderNum])ocMsgs[orderNum]=[{t:'Здравствуйте! Ваш заказ принят 👨‍🍳',out:false,time:'13:45'}];
+function openOrderChat(shopName,orderNum,shopEmoji){
+  shopEmoji=shopEmoji||'🏪';
+  document.getElementById('oc-av').textContent=shopEmoji;
+  document.getElementById('oc-name').textContent=shopName||'Магазин';
+  document.getElementById('oc-info').innerHTML='Заказ <strong>#'+orderNum+'</strong> · <strong>'+(shopName||'Магазин')+'</strong>';
+  if(!ocMsgs[orderNum])ocMsgs[orderNum]=[{t:'Здравствуйте! Ваш заказ принят 👨‍🍳',out:false,time:''}];
   renderOcChat(orderNum);
   document.getElementById('oc-inp').dataset.order=orderNum;
-  document.getElementById('oc-inp').dataset.vid=vid;
   goTo('chat-order');
 }
 function ocSend(txt){
@@ -802,42 +1462,6 @@ function ocSend(txt){
   setTimeout(function(){ocMsgs[orderNum].push({t:rep,out:false,time:t});renderOcChat(orderNum);},800);
 }
 function renderOcChat(orderNum){var el=document.getElementById('oc-msgs');if(!el)return;el.innerHTML=(ocMsgs[orderNum]||[]).map(function(m){return'<div class="msg '+(m.out?'out':'in')+'">'+m.t+'<div class="msg-time">'+m.time+'</div></div>';}).join('');el.scrollTop=el.scrollHeight;}
-function renderOrders(){
-  var el=document.getElementById('orders-content');
-  if(!el)return;
-  var cur=tr('currency');
-  var active=ordersData.filter(function(o){return o.status==='active';});
-  var done=ordersData.filter(function(o){return o.status==='done';});
-  var html='';
-  if(active.length){
-    html+='<div class="sec-title">'+tr('orders.active.title')+'</div>';
-    active.forEach(function(o,i){
-      var idx=ordersData.indexOf(o);
-      var dateStr=o.dateKey==='today'?tr('orders.today')+', '+o.time:o.dateKey==='yesterday'?tr('orders.yesterday')+', '+o.time:o.dateRaw;
-      html+='<div class="order-card" onclick="openOrderDetail('+idx+')" style="cursor:pointer">'
-        +'<div class="order-head"><span class="order-venue">'+o.venue+'</span><span class="order-status status-active">'+tr('order.status.active')+'</span></div>'
-        +'<div class="order-items">'+o.itemsShort+'</div>'
-        +'<div class="order-footer"><span>'+dateStr+'</span><span class="order-price">'+o.total+' '+cur+'</span>'
-        +'<div class="order-chat-btn" onclick="event.stopPropagation();openOrderChat(\''+o.vid+'\',\''+o.id+'\')">'+tr('orders.chat')+'</div>'
-        +'</div></div>';
-    });
-  }
-  if(done.length){
-    html+='<div class="sec-title" style="margin-top:14px">'+tr('orders.done.title')+'</div>';
-    done.forEach(function(o){
-      var idx=ordersData.indexOf(o);
-      var dateStr=o.dateKey==='today'?tr('orders.today')+', '+o.time:o.dateKey==='yesterday'?tr('orders.yesterday')+', '+o.time:o.dateRaw;
-      html+='<div class="order-card" onclick="openOrderDetail('+idx+')" style="cursor:pointer">'
-        +'<div class="order-head"><span class="order-venue">'+o.venue+'</span><span class="order-status status-done">'+tr('order.status.done')+'</span></div>'
-        +'<div class="order-items">'+o.itemsShort+'</div>'
-        +'<div class="order-footer"><span>'+dateStr+'</span><span class="order-price">'+o.total+' '+cur+'</span>'
-        +'<div class="order-chat-btn" onclick="event.stopPropagation();openOrderChat(\''+o.vid+'\',\''+o.id+'\')">'+tr('orders.chat')+'</div>'
-        +'</div></div>';
-    });
-  }
-  el.innerHTML=html;
-}
-function filterCards(cat,el){document.querySelectorAll('.tabs .tab').forEach(function(t){t.classList.remove('active')});el.classList.add('active');document.querySelectorAll('#home-cards .card').forEach(function(c){c.style.display=(cat==='all'||c.dataset.cat===cat)?'':'none'});}
 function sendCode(){
   var ph=document.getElementById('phone-inp').value.trim();
   if(!ph){alert(tr('ob.sub'));return;}
@@ -869,34 +1493,189 @@ async function loginAndGo(){
   }
 }
 function selectPayMethod(method,row){document.querySelectorAll('#payment-list .settings-check').forEach(function(c){c.classList.remove('active');c.textContent='';});var check=row.querySelector('.settings-check');check.classList.add('active');check.textContent='✓';}
-var ordersData=[
-  {id:'#1042',venue:'🍜 Самарканд',status:'active',dateKey:'today',time:'13:45',dateRaw:'',itemsShort:'Плов, Шашлык × 2, Лепёшка',items:[{n:'Плов',p:25},{n:'Шашлык × 2',p:60},{n:'Лепёшка',p:5}],delivery:5,total:87,vid:'samarkand'},
-  {id:'#1039',venue:'🛒 Магнит',status:'done',dateKey:'yesterday',time:'18:20',dateRaw:'',itemsShort:'Молоко, Хлеб, Яйца × 10',items:[{n:'Молоко',p:6},{n:'Хлеб',p:3},{n:'Яйца × 10',p:12}],delivery:5,total:34,vid:'magnit'},
-  {id:'#1021',venue:'🍕 Pizza House',status:'done',dateKey:'fixed',time:'',dateRaw:'12 июня, 20:10',itemsShort:'Пицца Маргарита, Кола',items:[{n:'Пицца Маргарита',p:28},{n:'Кола',p:8}],delivery:5,total:52,vid:'pizza'}
-];
-function openOrderDetail(idx){
-  var o=ordersData[idx];
+
+// ============================================================
+// АДРЕСА — реальные из /profile
+// ============================================================
+async function loadAddresses(){
+  var list=document.getElementById('addresses-list');
+  if(!list)return;
+  if(!authToken){list.innerHTML='<div style="padding:14px;color:var(--text2)">Войдите чтобы видеть адреса</div>';return;}
+  var data=await apiRequest('GET','/profile');
+  if(!data||!data.address){
+    list.innerHTML='<div style="padding:14px;color:var(--text2)">Адрес не указан</div>';
+    return;
+  }
+  list.innerHTML='<div class="settings-row"><div class="settings-row-left"><div class="settings-row-icon">📍</div><div><div class="settings-row-label">Адрес доставки</div><div class="settings-row-sub">'+data.address+'</div></div></div><div class="settings-row-right"><span style="font-size:11px;padding:2px 8px;background:#E1F5EE;color:#085041;border-radius:10px">Основной</span></div></div>';
+}
+
+async function saveAddress(){
+  var val=(document.getElementById('address-input')||{}).value||'';
+  val=val.trim();
+  if(!val)return;
+  var data=await apiRequest('PATCH','/profile',{address:val});
+  if(data){
+    document.getElementById('address-form').style.display='none';
+    document.getElementById('address-input').value='';
+    loadAddresses();
+  }
+}
+
+// ============================================================
+// ЗАКАЗЫ — реальные из /orders
+// ============================================================
+var ordersCache=[];
+
+var STATUS_MAP={
+  'new':'Новый','preparing':'Готовится','on_way':'В пути','delivered':'Доставлено',
+  'ready':'Готов','finished':'Завершён','canceled':'Отменён','active':'В пути'
+};
+
+function statusLabel(o){
+  var ms=(o.merchant_status||o.status||'').toLowerCase();
+  var cs=(o.courier_status||'').toLowerCase();
+  // Завершённые
+  if(ms==='canceled'||o.status==='canceled')return{label:'Отменён',cls:'status-done'};
+  if(ms==='delivered'||ms==='finished'||cs==='delivered')return{label:'Доставлено ✓',cls:'status-done'};
+  // Активные
+  if(cs==='on_way'||cs==='picked_up')return{label:'В пути 🛵',cls:'status-active'};
+  if(ms==='preparing'||ms==='ready'||cs==='assigned')return{label:'Готовится 👨‍🍳',cls:'status-active'};
+  if(ms==='new'||cs==='searching')return{label:'Новый ⏳',cls:'status-active'};
+  return{label:ms||'Новый',cls:'status-active'};
+}
+
+var ordersCursor=null;
+
+async function renderOrders(append){
+  var el=document.getElementById('orders-content');
+  if(!el)return;
+  if(!authToken){
+    el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--text2)"><div style="font-size:44px;margin-bottom:10px">🔐</div><p>Войдите чтобы видеть заказы</p></div>';
+    return;
+  }
+  if(!append){
+    ordersCursor=null;
+    el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text2)">⏳ Загрузка...</div>';
+  }
+  var url='/orders?limit=20'+(ordersCursor?'&cursor='+ordersCursor:'');
+  var data=await apiRequest('GET',url);
+  if(!data||!data.items||!data.items.length){
+    if(!append)el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--text2)"><div style="font-size:44px;margin-bottom:10px">📋</div><p>Заказов пока нет</p></div>';
+    return;
+  }
+  ordersCursor=data.next_cursor||null;
+  if(!append)ordersCache=data.items;
+  else ordersCache=ordersCache.concat(data.items);
   var cur=tr('currency');
-  var sub=o.items.reduce(function(s,i){return s+i.p;},0),total=sub+o.delivery;
-  var itemsHtml=o.items.map(function(i){return'<div class="order-detail-row"><span>'+i.n+'</span><span>'+i.p+' '+cur+'</span></div>';}).join('');
-  var isActive=o.status==='active';
+  var active=ordersCache.filter(function(o){
+    var ms=(o.merchant_status||o.status||'').toLowerCase();
+    return ms!=='canceled'&&ms!=='delivered'&&ms!=='completed'&&ms!=='finished';
+  });
+  var done=ordersCache.filter(function(o){
+    var ms=(o.merchant_status||o.status||'').toLowerCase();
+    var cs=(o.courier_status||'').toLowerCase();
+    return ms==='delivered'||ms==='completed'||ms==='finished'||cs==='delivered';
+  });
+  var html='';
+  if(active.length){
+    html+='<div class="sec-title">'+tr('orders.active.title')+'</div>';
+    active.forEach(function(o){
+      var s=statusLabel(o);
+      var date=o.created_at?(o.created_at.substring(0,10)+' '+o.created_at.substring(11,16)):'';
+      var shopEmoji=o.business_type==='restaurant'?'🍽':'🛒';
+      html+='<div class="order-card" onclick="openOrderDetailById('+o.id+')" style="cursor:pointer">'
+        +'<div class="order-head"><span class="order-venue">'+(o.shop_name||'Магазин')+'</span><span class="order-status '+s.cls+'">'+s.label+'</span></div>'
+        +'<div class="order-items">Заказ #'+o.id+'</div>'
+        +'<div class="order-footer"><span>'+date+'</span><span class="order-price">'+o.total_amount+' '+cur+'</span>'
+        +'<div class="order-chat-btn" onclick="event.stopPropagation();openOrderChat(\''+escapeStr(o.shop_name||'Магазин')+'\','+o.id+',\''+shopEmoji+'\')">'+tr('orders.chat')+'</div>'
+        +'</div></div>';
+    });
+  }
+  if(done.length){
+    html+='<div class="sec-title" style="margin-top:14px">'+tr('orders.done.title')+'</div>';
+    done.forEach(function(o){
+      var s=statusLabel(o);
+      var date=o.created_at?(o.created_at.substring(0,10)+' '+o.created_at.substring(11,16)):'';
+      html+='<div class="order-card" onclick="openOrderDetailById('+o.id+')" style="cursor:pointer">'
+        +'<div class="order-head"><span class="order-venue">'+(o.shop_name||'Магазин')+'</span><span class="order-status '+s.cls+'">'+s.label+'</span></div>'
+        +'<div class="order-items">Заказ #'+o.id+'</div>'
+        +'<div class="order-footer"><span>'+date+'</span><span class="order-price">'+o.total_amount+' '+cur+'</span></div>'
+        +'</div>';
+    });
+  }
+  if(!active.length&&!done.length){
+    el.innerHTML='<div style="text-align:center;padding:60px 0;color:var(--text2)"><div style="font-size:44px;margin-bottom:10px">📋</div><p>Активных заказов нет</p></div>';
+    return;
+  }
+  if(ordersCursor){
+    html+='<button class="add-address-btn" style="margin-top:14px" onclick="renderOrders(true)">Загрузить ещё</button>';
+  }
+  el.innerHTML=html;
+}
+
+function escapeStr(s){return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+
+async function openOrderDetailById(orderId){
+  var resp=await apiRequest('GET','/orders/'+orderId);
+  if(!resp||!resp.order)return;
+  var data=resp.order;
+  var itemsList=resp.items||[];
+  var cur=tr('currency');
+  var s=statusLabel(data);
+  var isActive=s.cls==='status-active';
+  var itemsHtml=itemsList.map(function(i){
+    return'<div class="order-detail-row"><span>'+(i.name||'Товар')+' × '+i.quantity+'</span><span>'+(i.price_at_moment*i.quantity)+' '+cur+'</span></div>';
+  }).join('');
+  var date=data.created_at?(data.created_at.substring(0,10)+' '+data.created_at.substring(11,16)):'';
   var trackHtml=isActive
-    ?'<div class="track-steps"><div class="track-step"><div class="step-dot done">✓</div><span class="step-label active">'+tr('order.track.accepted')+'</span></div><div class="track-step"><div class="step-dot done">✓</div><span class="step-label active">'+tr('order.track.preparing')+'</span></div><div class="track-step"><div class="step-dot active">→</div><span class="step-label active">'+tr('order.track.onway')+'</span></div><div class="track-step"><div class="step-dot">✓</div><span class="step-label">'+tr('order.track.delivered')+'</span></div></div>'
+    ?'<div class="track-steps"><div class="track-step"><div class="step-dot done">✓</div><span class="step-label active">'+tr('order.track.accepted')+'</span></div><div class="track-step"><div class="step-dot '+(data.merchant_status==='preparing'||data.merchant_status==='ready'?'done':'active')+'">→</div><span class="step-label active">'+tr('order.track.preparing')+'</span></div><div class="track-step"><div class="step-dot '+(data.courier_status==='on_way'||data.courier_status==='picked_up'?'active':'')+'">🛵</div><span class="step-label">'+tr('order.track.onway')+'</span></div><div class="track-step"><div class="step-dot">✓</div><span class="step-label">'+tr('order.track.delivered')+'</span></div></div>'
     :'<div class="track-steps"><div class="track-step"><div class="step-dot done">✓</div><span class="step-label">'+tr('order.track.accepted')+'</span></div><div class="track-step"><div class="step-dot done">✓</div><span class="step-label">'+tr('order.track.preparing')+'</span></div><div class="track-step"><div class="step-dot done">✓</div><span class="step-label">'+tr('order.track.onway')+'</span></div><div class="track-step"><div class="step-dot done">✓</div><span class="step-label">'+tr('order.track.delivered')+'</span></div></div>';
-  var dateStr=o.dateKey==='today'?tr('orders.today')+', '+o.time:o.dateKey==='yesterday'?tr('orders.yesterday')+', '+o.time:o.dateRaw;
+  var shopEmoji=data.business_type==='restaurant'?'🍽':'🛒';
+  var chatBtn=isActive?'<button class="btn-primary" style="margin-top:10px;background:var(--dark)" onclick="openOrderChat(\''+escapeStr(data.shop_name||'Магазин')+'\','+orderId+',\''+shopEmoji+'\')">'+tr('order.detail.chat')+'</button>':'';
   document.getElementById('order-detail-content').innerHTML=
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-size:18px;font-weight:600;color:var(--text)">'+tr('order.detail.title')+' '+o.id+'</div><span class="order-status-badge '+(isActive?'active':'done')+'">'+(isActive?'🛵 ':'✓ ')+(isActive?tr('order.status.active'):tr('order.status.done'))+'</span></div>'
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-size:18px;font-weight:600;color:var(--text)">'+tr('order.detail.title')+' #'+orderId+'</div><span class="order-status-badge '+(isActive?'active':'done')+'">'+s.label+'</span></div>'
     +trackHtml
-    +'<div class="order-detail-card" style="margin-top:14px"><div class="order-detail-title">'+tr('order.detail.composition')+'</div>'+itemsHtml+'<div class="order-detail-row"><span>'+tr('order.detail.delivery')+'</span><span>'+o.delivery+' '+cur+'</span></div><div class="order-detail-row"><span>'+tr('order.detail.total')+'</span><span>'+total+' '+cur+'</span></div></div>'
-    +'<div class="order-detail-card"><div class="order-detail-title">'+tr('order.detail.info')+'</div><div class="order-detail-row"><span>'+tr('order.detail.venue')+'</span><span>'+o.venue+'</span></div><div class="order-detail-row"><span>'+tr('order.detail.date')+'</span><span>'+dateStr+'</span></div><div class="order-detail-row"><span>'+tr('order.detail.address')+'</span><span>пр. Рудаки, 105</span></div></div>'
-    +(!isActive?'<button class="btn-primary" onclick="reorder('+idx+')">'+tr('order.detail.reorder')+'</button>':'')
-    +'<button class="btn-primary" style="margin-top:8px;background:var(--bg);color:var(--text);border:.5px solid var(--border)" onclick="openOrderChat(\''+o.vid+'\',\''+o.id+'\')">'+tr('order.detail.chat')+'</button>';
+    +'<div class="order-detail-card" style="margin-top:14px"><div class="order-detail-title">'+tr('order.detail.composition')+'</div>'+itemsHtml+'<div class="order-detail-row"><span>'+tr('order.detail.total')+'</span><span>'+data.total_amount+' '+cur+'</span></div></div>'
+    +'<div class="order-detail-card"><div class="order-detail-title">'+tr('order.detail.info')+'</div><div class="order-detail-row"><span>'+tr('order.detail.venue')+'</span><span>'+(data.shop_name||'Магазин')+'</span></div><div class="order-detail-row"><span>'+tr('order.detail.date')+'</span><span>'+date+'</span></div>'+(data.comment?'<div class="order-detail-row"><span>Комментарий</span><span>'+data.comment+'</span></div>':'')+'</div>'
+    +chatBtn;
   goTo('order-detail');
 }
-function reorder(idx){
-  var o=ordersData[idx],v=V[o.vid];if(!v)return;
-  o.items.forEach(function(item){for(var i=0;i<v.items.length;i++){if(v.items[i].n===item.n||(item.n.indexOf(v.items[i].n)>-1)){var key=o.vid+'_'+i;if(cart[key])cart[key].qty++;else cart[key]={name:v.items[i].n,emoji:v.items[i].e,price:v.items[i].p,qty:1,vid:o.vid};}}});
-  updBadge();goTo('cart');
+
+// ============================================================
+// ОФОРМЛЕНИЕ ЗАКАЗА — реальный POST /orders
+// ============================================================
+async function placeOrder(){
+  if(!authToken){goTo('onboard');return;}
+  var keys=Object.keys(cart);
+  if(!keys.length)return;
+  var byShop={};
+  keys.forEach(function(k){
+    var it=cart[k];
+    var sid=it.shopId||0;
+    if(!byShop[sid])byShop[sid]=[];
+    if(it.id)byShop[sid].push({product_id:it.id,quantity:it.qty});
+  });
+  var shopIds=Object.keys(byShop).filter(function(s){return parseInt(s)>0;});
+  if(!shopIds.length)return;
+  var shopId=parseInt(shopIds[0]);
+  var items=byShop[shopIds[0]];
+  var comment=(document.getElementById('order-comment')||{}).value||'';
+  var addrFields=[document.getElementById('co-addr1'),document.getElementById('co-addr2')];
+  var addr=(addrFields[0]?addrFields[0].value:'')+' '+(addrFields[1]?addrFields[1].value:'');
+  addr=addr.trim();
+  var payload={shop_id:shopId,items:items,comment:(comment+(addr?(' | Адрес: '+addr):'')).trim(),fulfillment_type:'courier'};
+  var btn=document.querySelector('#screen-checkout .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Оформляем...';}
+  var data=await apiRequest('POST','/orders',payload);
+  if(btn){btn.disabled=false;btn.textContent=tr('checkout.confirm');}
+  if(data&&data.order_id){
+    // Очищаем корзину локально и на сервере
+    cart={};saveCart();updBadge();
+    serverCartClear();
+    goTo('success');
+  } else {
+    alert('Ошибка оформления заказа. Проверьте соединение и попробуйте снова.');
+  }
 }
 window.openAI=function(){
   document.getElementById('aiOverlay').classList.add('open');
@@ -944,48 +1723,8 @@ function showFallback(text){
   }
   document.getElementById('modal-msgs').scrollTop=999999;
 }
-function yovarSend(){
-  var inp=document.getElementById('yovar-inp'),text=inp.value.trim();
-  if(!text)return;inp.value='';
-  addMsg(text,true);
-  yovarHistory.push({role:'user',parts:[{text:text}]});
-  if(yovarHistory.length>8)yovarHistory=yovarHistory.slice(-8);
-  var typing=addMsg(tr('yovar.typing'),false);
-  typing.style.fontStyle='italic';typing.style.color='var(--text2)';
-  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+GEMINI_KEY,{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({system_instruction:{parts:[{text:SYSTEM_PROMPT}]},contents:yovarHistory,generationConfig:{maxOutputTokens:200,temperature:0.7}})
-  })
-  .then(function(r){
-    if(!r.ok){typing.remove();showFallback(text);return null;}
-    return r.json();
-  })
-  .then(function(data){
-    if(!data)return;
-    var reply='';
-    try{reply=data.candidates[0].content.parts[0].text;}catch(e){typing.remove();showFallback(text);return;}
-    typing.remove();
-    yovarHistory.push({role:'model',parts:[{text:reply}]});
-    var addMatch=reply.match(/ACTION:ADD:(\w+):([^\n]+)/);
-    var searchMatch=reply.match(/ACTION:SEARCH:([^\n]+)/);
-    var clean=reply.replace(/ACTION:(ADD|SEARCH):[^\n]*/gi,'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/`/g,'').trim();
-    if(!clean)clean=addMatch?'Нашёл!':searchMatch?'Вот что есть:':'Чем ещё помочь?';
-    var msgDiv=addMsg(clean,false);
-    if(addMatch){
-      var vid=addMatch[1],itemName=addMatch[2].trim(),v=V[vid];
-      if(v){var idx=-1;for(var i=0;i<v.items.length;i++){if(v.items[i].n===itemName){idx=i;break;}}
-        if(idx>=0){var btn=document.createElement('button');btn.className='modal-action-btn';btn.textContent='+ '+itemName+' '+v.items[idx].p+' сом';
-          btn.onclick=(function(vid,idx){return function(){var key=vid+'_'+idx;if(cart[key])cart[key].qty++;else cart[key]={name:V[vid].items[idx].n,emoji:V[vid].items[idx].e,price:V[vid].items[idx].p,qty:1,vid:vid};updBadge();this.textContent='✓ '+V[vid].items[idx].n;this.style.background='#1D9E75';this.onclick=null;};})(vid,idx);
-          msgDiv.appendChild(document.createElement('br'));msgDiv.appendChild(btn);}}
-    } else if(searchMatch){
-      var query=searchMatch[1].trim(),found=localFallback(query);
-      if(found.length){found.forEach(function(r){var btn=document.createElement('button');btn.className='modal-action-btn';btn.style.marginRight='6px';btn.textContent='+ '+r.item.n+' '+r.item.p+' сом';btn.onclick=(function(vid,idx){return function(){var key=vid+'_'+idx;if(cart[key])cart[key].qty++;else cart[key]={name:V[vid].items[idx].n,emoji:V[vid].items[idx].e,price:V[vid].items[idx].p,qty:1,vid:vid};updBadge();this.textContent='✓ '+V[vid].items[idx].n;this.style.background='#1D9E75';this.onclick=null;};})(r.vid,r.idx);msgDiv.appendChild(document.createElement('br'));msgDiv.appendChild(btn);});}
-      else{msgDiv.textContent='К сожалению, «'+query+'» нет в каталоге. Попробуйте: плов, шашлык, пицца, молоко.';}
-    }
-    document.getElementById('modal-msgs').scrollTop=999999;
-  })
-  .catch(function(){typing.remove();showFallback(text);});
-}
+var MISTRAL_KEY='RZih7gTFIi0NP4cZYbNpuMq4OIpkqmNG';
+
 // ============================================================
 // i18n — словари переводов
 // ============================================================
@@ -1512,15 +2251,16 @@ function tr(key){return (I18N[currentLang]&&I18N[currentLang][key])||I18N.ru[key
 function applyLang(){
   var L=currentLang;
   // Онбординг
-  document.querySelector('.onboard-tag').textContent=tr('ob.tag');
-  document.querySelector('#step-phone .onboard-title').textContent=tr('ob.title');
-  document.querySelector('#step-phone .onboard-sub').textContent=tr('ob.sub');
-  document.querySelector('#step-phone .btn-primary').textContent=tr('ob.btn');
-  document.querySelector('.skip-btn').textContent=tr('ob.skip');
-  document.querySelector('#step-otp .onboard-title').textContent=tr('ob.otp.title');
+  var _s=function(sel,val){var el=document.querySelector(sel);if(el)el.textContent=val;};
+  _s('.onboard-tag',tr('ob.tag'));
+  _s('#step-phone .onboard-title',tr('ob.title'));
+  _s('#step-phone .onboard-sub',tr('ob.sub'));
+  _s('#step-phone .btn-primary',tr('ob.btn'));
+  _s('.skip-btn',tr('ob.skip'));
+  _s('#step-otp .onboard-title',tr('ob.otp.title'));
   var otpSub=document.querySelector('#step-otp .onboard-sub');
-  if(otpSub){var num=document.getElementById('otp-num');otpSub.childNodes[0].textContent=tr('ob.otp.sub')+' ';}
-  document.querySelector('#step-otp .btn-primary').textContent=tr('ob.otp.btn');
+  if(otpSub&&otpSub.childNodes[0])otpSub.childNodes[0].textContent=tr('ob.otp.sub')+' ';
+  _s('#step-otp .btn-primary',tr('ob.otp.btn'));
   // Сайдбар
   var sbSecs=document.querySelectorAll('.sb-sec');
   if(sbSecs[0])sbSecs[0].textContent=tr('sb.sections');
@@ -1653,9 +2393,9 @@ function applyLang(){
   if(ocBtns[2]){ocBtns[2].textContent=tr('oc.q3');ocBtns[2].onclick=function(){ocSend(tr('oc.q3'));};}
   // Обновляем экран заказов если он уже был открыт
   renderOrders();
-  // Обновляем SYSTEM_PROMPT Ёвара по языку
-  var langNote=L==='tj'?'Язык пользователя: таджикский (tg). Отвечай на таджикском':L==='uz'?'Язык пользователя: узбекский (uz). Отвечай на узбекском':'Язык пользователя: русский (ru). Отвечай на русском';
-  SYSTEM_PROMPT='Ты Ёвар — помощник доставки Сабад (Душанбе). Отвечай кратко 1-3 предложения. '+langNote+'. БЕЗ markdown, БЕЗ звёздочек, только простой текст.\nЕсли пользователь хочет добавить конкретный товар→ACTION:ADD:venueKey:itemName\nЕсли ищет по описанию→ACTION:SEARCH:запрос\nКаталог:\npizza:Маргарита/28,Пепперони/35,Кола/8,Тирамису/18\nmagnit:Молоко/6,Хлеб/3,Яйца/12,Масло/15\nsamarkand:Плов/25,Шашлык/30,Мастава/20,Лепёшка/5\napteka:Парацетамол/4,ВитаминC/12,Бинт/3,Ибупрофен/7';
+  // Обновляем язык Ёвара
+  var langNote=L==='tj'?' Отвечай на таджикском языке.':L==='uz'?' Отвечай на узбекском языке.':' Отвечай на русском языке.';
+  SYSTEM_PROMPT_BASE='Ты Ёвар — умный помощник доставки Сабад (Душанбе). Отвечай кратко 1-3 предложения.'+langNote+' БЕЗ markdown, БЕЗ звёздочек, только простой текст. Если товара нет в каталоге — честно скажи что его нет и предложи похожее. Если пользователь ищет с опечаткой — догадайся что имел в виду.';
 }
 window.selectLang=function(lang,el){
   currentLang=lang;
@@ -1688,11 +2428,16 @@ setTimeout(type,900);
 // Если уже заходили раньше — сразу на главную
 if(authToken||localStorage.getItem('sabad_visited')){
   localStorage.setItem('sabad_visited','1');
+  updateSidebarUser();
   goTo('home');
+  if(authToken){
+    loadProfile();
+    syncCartOnLogin();
+  }
 } else {
   goTo('onboard');
+  initTelegramWidget();
 }
-document.getElementById('toolbar').style.display='none';
 // Применяем сохранённый язык при старте
 applyLang();
 // Восстанавливаем галочку выбранного языка

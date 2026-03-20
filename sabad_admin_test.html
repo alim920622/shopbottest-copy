@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sabad — Admin Test Panel</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#232634;--text:#e2e8f0;--text2:#8892a4;--border:#2d3348;--green:#5DCAA5;--red:#f87171;--blue:#60a5fa;--yellow:#fbbf24;--radius:8px;--font:'SF Mono','Fira Code',monospace}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.login-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;width:320px;text-align:center}
+.login-logo{font-size:28px;font-weight:700;color:var(--green);margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+.login-input{width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;outline:none;margin-bottom:12px}
+.login-input:focus{border-color:var(--green)}
+.login-btn{width:100%;padding:11px;background:var(--green);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer}
+.login-btn:hover{opacity:.9}
+.login-err{font-size:12px;color:var(--red);margin-top:8px;display:none}
+
+.panel{display:none}
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+.header-logo{font-size:16px;font-weight:700;color:var(--green)}
+.header-right{display:flex;align-items:center;gap:12px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;margin-right:4px}
+.status-txt{font-size:12px;color:var(--text2)}
+.logout-btn{font-size:12px;color:var(--text2);cursor:pointer;padding:4px 8px;border:1px solid var(--border);border-radius:4px}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+.main{display:flex;height:calc(100vh - 49px)}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0}
+.sb-section{padding:12px 14px 4px;font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.8px}
+.sb-item{padding:8px 14px;font-size:13px;color:var(--text2);cursor:pointer;border-left:2px solid transparent;transition:all .15s}
+.sb-item:hover{background:var(--bg3);color:var(--text)}
+.sb-item.active{background:var(--bg3);color:var(--green);border-left-color:var(--green)}
+.sb-badge{float:right;font-size:10px;background:var(--bg);padding:1px 5px;border-radius:10px;color:var(--text2)}
+
+.content{flex:1;overflow:auto;padding:20px}
+.section{display:none}
+.section.active{display:block}
+
+/* Token bar */
+.token-bar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.token-label{font-size:12px;color:var(--text2);flex-shrink:0}
+.token-input{flex:1;min-width:200px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--green);font-family:var(--font);font-size:11px;outline:none}
+.token-btn{padding:6px 12px;background:var(--green);color:#fff;border:none;border-radius:5px;font-size:12px;cursor:pointer;flex-shrink:0}
+.token-btn.sec{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+
+/* Tables */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--font)}
+th{background:var(--bg3);padding:8px 12px;text-align:left;color:var(--text2);font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:7px 12px;border-bottom:.5px solid var(--border);color:var(--text);max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.td-null{color:var(--text2);font-style:italic}
+.td-bool-t{color:var(--green)}
+.td-bool-f{color:var(--red)}
+.td-num{color:var(--blue)}
+.td-date{color:var(--yellow)}
+
+/* API tester */
+.api-row{display:flex;gap:8px;margin-bottom:12px;align-items:flex-start;flex-wrap:wrap}
+.method-sel{padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--yellow);font-weight:700;font-size:13px;outline:none;width:90px}
+.url-input{flex:1;min-width:200px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;outline:none;font-family:var(--font)}
+.url-input:focus{border-color:var(--blue)}
+.send-btn{padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0}
+.send-btn:hover{opacity:.9}
+.body-input{width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:12px;font-family:var(--font);outline:none;min-height:80px;resize:vertical}
+.response-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-family:var(--font);font-size:12px;white-space:pre-wrap;word-break:break-all;max-height:400px;overflow-y:auto;color:var(--text);line-height:1.6}
+.response-box.ok{border-color:var(--green)}
+.response-box.err{border-color:var(--red)}
+.response-meta{font-size:11px;color:var(--text2);margin-bottom:8px;display:flex;gap:12px}
+.status-ok{color:var(--green);font-weight:700}
+.status-err{color:var(--red);font-weight:700}
+
+/* Quick endpoints */
+.quick-btns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.quick-btn{padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font)}
+.quick-btn:hover{border-color:var(--blue);color:var(--blue)}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat-val{font-size:28px;font-weight:700;color:var(--green)}
+.stat-lbl{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* Misc */
+.page-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.page-title span{font-size:12px;color:var(--text2);font-weight:400}
+.refresh-btn{padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:11px;color:var(--text2);cursor:pointer}
+.refresh-btn:hover{border-color:var(--green);color:var(--green)}
+.loading{color:var(--text2);font-size:13px;padding:20px;text-align:center}
+.error-msg{color:var(--red);font-size:13px;padding:12px;background:rgba(248,113,113,.1);border-radius:var(--radius);margin-bottom:12px}
+.pagination{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--text2)}
+.page-btn{padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text2)}
+.page-btn:hover{border-color:var(--green);color:var(--green)}
+.page-btn:disabled{opacity:.4;cursor:default}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">⚡ Sabad</div>
+    <div class="login-sub">Admin Test Panel</div>
+    <input class="login-input" type="password" id="admin-pass" placeholder="Пароль" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" onclick="doLogin()">Войти</button>
+    <div class="login-err" id="login-err">Неверный пароль</div>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div class="panel" id="panel">
+  <div class="header">
+    <div class="header-logo">⚡ Sabad Admin</div>
+    <div class="header-right">
+      <div><span class="status-dot"></span><span class="status-txt" id="api-status">Проверка...</span></div>
+      <div class="logout-btn" onclick="doLogout()">Выйти</div>
+    </div>
+  </div>
+  <div class="main">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sb-section">Обзор</div>
+      <div class="sb-item active" onclick="showSection('dashboard')">📊 Dashboard</div>
+      <div class="sb-section">Таблицы БД</div>
+      <div class="sb-item" onclick="showSection('shops')">🏪 shops <span class="sb-badge" id="cnt-shops">—</span></div>
+      <div class="sb-item" onclick="showSection('products')">📦 products <span class="sb-badge" id="cnt-products">—</span></div>
+      <div class="sb-item" onclick="showSection('categories')">🗂 categories <span class="sb-badge" id="cnt-categories">—</span></div>
+      <div class="sb-item" onclick="showSection('orders')">🛒 orders <span class="sb-badge" id="cnt-orders">—</span></div>
+      <div class="sb-item" onclick="showSection('users')">👤 users <span class="sb-badge" id="cnt-users">—</span></div>
+      <div class="sb-item" onclick="showSection('cart')">🧺 cart <span class="sb-badge" id="cnt-cart">—</span></div>
+      <div class="sb-item" onclick="showSection('profiles')">📋 client_profiles</div>
+      <div class="sb-section">Инструменты</div>
+      <div class="sb-item" onclick="showSection('api-tester')">🔧 API Tester</div>
+      <div class="sb-item" onclick="showSection('sql')">🗄 SQL Query</div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="section active" id="section-dashboard">
+        <div class="page-title">📊 Dashboard <button class="refresh-btn" onclick="loadDashboard()">↻ Обновить</button></div>
+        <div class="stats-grid" id="stats-grid"><div class="loading">Загрузка...</div></div>
+      </div>
+
+      <!-- SHOPS -->
+      <div class="section" id="section-shops">
+        <div class="page-title">🏪 Магазины / Рестораны <button class="refresh-btn" onclick="loadTable('shops')">↻</button></div>
+        <div id="table-shops"><div class="loading">Загрузка...</div></div>
+      </div>
+
+      <!-- PRODUCTS -->
+      <div class="section" id="section-products">
+        <div class="page-title">📦 Товары <button class="refresh-btn" onclick="loadTable('products')">↻</button></div>
+        <div style="margin-bottom:10px;display:flex;gap:8px">
+          <input id="filter-products" placeholder="Поиск по названию..." style="padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;outline:none;width:200px" oninput="filterTableRows('products',this.value)"/>
+        </div>
+        <div id="table-products"><div class="loading">Загрузка...</div></div>
+      </div>
+
+      <!-- CATEGORIES -->
+      <div class="section" id="section-categories">
+        <div class="page-title">🗂 Категории <button class="refresh-btn" onclick="loadTable('categories')">↻</button></div>
+        <div id="table-categories"><div class="loading">Загрузка...</div></div>
+      </div>
+
+      <!-- ORDERS -->
+      <div class="section" id="section-orders">
+        <div class="page-title">🛒 Заказы <button class="refresh-btn" onclick="loadTable('orders')">↻</button></div>
+        <div id="table-orders"><div class="loading">Загрузка...</div></div>
+      </div>
+
+      <!-- USERS -->
+      <div class="section" id="section-users">
+        <div class="page-title">👤 Пользователи <button class="refresh-btn" onclick="loadTable('users')">↻</button></div>
+        <div id="table-users"><div class="loading">Загрузка...</div></div>
+      </div>
+
+      <!-- CART -->
+      <div class="section" id="section-cart">
+        <div class="page-title">🧺 Корзины <button class="refresh-btn" onclick="loadTable('cart')">↻</button></div>
+        <div id="table-cart"><div class="loading">Загрузка...</div></div>
+      </div>
+
+      <!-- PROFILES -->
+      <div class="section" id="section-profiles">
+        <div class="page-title">📋 Профили клиентов <button class="refresh-btn" onclick="loadTable('profiles')">↻</button></div>
+        <div id="table-profiles"><div class="loading">Загрузка...</div></div>
+      </div>
+
+      <!-- API TESTER -->
+      <div class="section" id="section-api-tester">
+        <div class="page-title">🔧 API Tester</div>
+        <div class="token-bar">
+          <span class="token-label">Bearer Token:</span>
+          <input class="token-input" id="api-token" placeholder="JWT токен (автозаполняется после логина через Telegram)"/>
+          <button class="token-btn sec" onclick="clearToken()">Очистить</button>
+        </div>
+        <div class="quick-btns" id="quick-btns"></div>
+        <div class="api-row">
+          <select class="method-sel" id="req-method">
+            <option>GET</option><option>POST</option><option>PATCH</option><option>DELETE</option>
+          </select>
+          <input class="url-input" id="req-url" placeholder="/profile" value="/health"/>
+          <button class="send-btn" onclick="sendApiRequest()">▶ Send</button>
+        </div>
+        <div style="margin-bottom:8px">
+          <textarea class="body-input" id="req-body" placeholder='{"key": "value"} — тело запроса для POST/PATCH'></textarea>
+        </div>
+        <div id="api-response"></div>
+      </div>
+
+      <!-- SQL -->
+      <div class="section" id="section-sql">
+        <div class="page-title">🗄 SQL Query <span>только SELECT</span></div>
+        <div class="error-msg">⚠️ Прямой SQL через веб недоступен по соображениям безопасности.<br>Используй API Tester или подключись к БД через psql на сервере.</div>
+        <div style="font-size:13px;color:var(--text2)">Полезные команды для терминала:</div>
+        <div class="response-box" style="margin-top:10px">
+# Подключение к БД
+psql -U sabad_user -d sabad_db -h localhost
+
+# Основные запросы
+SELECT COUNT(*) FROM products WHERE is_active=true;
+SELECT s.name, COUNT(p.id) FROM shops s LEFT JOIN products p ON p.shop_id=s.id GROUP BY s.name;
+SELECT * FROM orders ORDER BY created_at DESC LIMIT 10;
+SELECT * FROM cart JOIN products p ON p.id=cart.product_id LIMIT 20;
+SELECT * FROM client_profiles WHERE phone != '' LIMIT 20;
+SELECT * FROM refresh_tokens WHERE revoked=0 ORDER BY created_at DESC LIMIT 5;
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /panel -->
+
+<script>
+var API_URL='https://sabad.duckdns.org/api';
+var ADMIN_PASS='sabad2024admin'; // Пароль для входа
+var authToken=localStorage.getItem('sabad_token')||'';
+
+// ==================== LOGIN ====================
+function doLogin(){
+  var pass=document.getElementById('admin-pass').value;
+  if(pass===ADMIN_PASS){
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('panel').style.display='block';
+    document.getElementById('login-err').style.display='none';
+    init();
+  } else {
+    document.getElementById('login-err').style.display='block';
+    document.getElementById('admin-pass').value='';
+  }
+}
+function doLogout(){
+  document.getElementById('login-wrap').style.display='flex';
+  document.getElementById('panel').style.display='none';
+  document.getElementById('admin-pass').value='';
+}
+document.getElementById('admin-pass').onkeydown=function(e){if(e.key==='Enter')doLogin();};
+
+// ==================== API ====================
+async function apiReq(method, path, body){
+  var headers={'Content-Type':'application/json'};
+  var token=document.getElementById('api-token').value||authToken;
+  if(token)headers['Authorization']='Bearer '+token;
+  var opts={method:method,headers:headers};
+  if(body)opts.body=JSON.stringify(body);
+  try{
+    var r=await fetch(API_URL+path,opts);
+    var data=await r.json();
+    return {ok:r.ok,status:r.status,data:data};
+  }catch(e){return {ok:false,status:0,data:{error:e.message}};}
+}
+
+// ==================== INIT ====================
+function init(){
+  checkApiStatus();
+  if(authToken)document.getElementById('api-token').value=authToken;
+  loadDashboard();
+  buildQuickBtns();
+}
+
+async function checkApiStatus(){
+  var r=await apiReq('GET','/health');
+  var el=document.getElementById('api-status');
+  if(r.ok&&r.data.ok){el.textContent='API Online';el.style.color='var(--green)';}
+  else{el.textContent='API Offline';el.style.color='var(--red)';}
+}
+
+// ==================== DASHBOARD ====================
+async function loadDashboard(){
+  var grid=document.getElementById('stats-grid');
+  grid.innerHTML='<div class="loading">Загрузка...</div>';
+  // Загружаем данные параллельно через API
+  var [shops,shops2,orders]=await Promise.all([
+    apiReq('GET','/catalog/merchants?type=shop&limit=100'),
+    apiReq('GET','/catalog/merchants?type=restaurant&limit=100'),
+    apiReq('GET','/orders?limit=100'),
+  ]);
+  var shopsCount=(shops.data.items||[]).length+(shops2.data.items||[]).length;
+  var ordersCount=(orders.data.items||[]).length;
+  var activeOrders=(orders.data.items||[]).filter(function(o){return o.status==='new'||o.status==='preparing';}).length;
+
+  // Обновляем счётчики в сайдбаре
+  document.getElementById('cnt-shops').textContent=shopsCount;
+  document.getElementById('cnt-orders').textContent=ordersCount;
+
+  grid.innerHTML=[
+    {val:shopsCount,lbl:'Заведений'},
+    {val:ordersCount,lbl:'Заказов (видимых)'},
+    {val:activeOrders,lbl:'Активных заказов'},
+    {val:authToken?'✓':'✗',lbl:'Авторизация'},
+  ].map(function(s){
+    return '<div class="stat-card"><div class="stat-val">'+s.val+'</div><div class="stat-lbl">'+s.lbl+'</div></div>';
+  }).join('');
+}
+
+// ==================== TABLES ====================
+var tableData={};
+var tablePage={};
+
+var TABLE_ENDPOINTS={
+  shops:'/catalog/merchants?type=shop&limit=50',
+  products:null, // через catalog
+  categories:null,
+  orders:'/orders?limit=50',
+  users:null,
+  cart:'/cart',
+  profiles:'/profile',
+};
+
+var TABLE_COLS={
+  shops:['id','name','business_type','address','phone','is_active'],
+  products:['id','name','price','shop_id','category_id','is_active'],
+  categories:['id','name','shop_id','is_active'],
+  orders:['id','shop_name','status','total_amount','created_at'],
+  cart:['product_id','quantity','name','price','shop_id'],
+  profiles:['user_id','full_name','phone','address'],
+};
+
+async function loadTable(name){
+  var el=document.getElementById('table-'+name);
+  if(!el)return;
+  el.innerHTML='<div class="loading">⏳ Загрузка...</div>';
+  showSection(name);
+
+  var data=[];
+  var cols=TABLE_COLS[name]||[];
+
+  if(name==='shops'){
+    var r1=await apiReq('GET','/catalog/merchants?type=shop&limit=100');
+    var r2=await apiReq('GET','/catalog/merchants?type=restaurant&limit=100');
+    data=(r1.data.items||[]).concat(r2.data.items||[]);
+    document.getElementById('cnt-shops').textContent=data.length;
+  } else if(name==='orders'){
+    var r=await apiReq('GET','/orders?limit=50');
+    data=r.data.items||[];
+    document.getElementById('cnt-orders').textContent=data.length+(r.data.next_cursor?'+':'');
+  } else if(name==='cart'){
+    var r=await apiReq('GET','/cart');
+    data=r.data.items||[];
+    document.getElementById('cnt-cart').textContent=data.length;
+  } else if(name==='profiles'){
+    var r=await apiReq('GET','/profile');
+    data=r.data?[r.data]:[];
+  } else if(name==='products'){
+    // Загружаем товары из первых магазинов
+    var shops=await apiReq('GET','/catalog/merchants?type=shop&limit=10');
+    var shops2=await apiReq('GET','/catalog/merchants?type=restaurant&limit=10');
+    var allShops=(shops.data.items||[]).concat(shops2.data.items||[]).slice(0,5);
+    for(var i=0;i<allShops.length;i++){
+      var cats=await apiReq('GET','/catalog/'+allShops[i].id+'/categories?limit=20');
+      var catList=cats.data.items||[];
+      for(var j=0;j<Math.min(catList.length,3);j++){
+        var prods=await apiReq('GET','/catalog/categories/'+catList[j].id+'/items?merchant_id='+allShops[i].id+'&limit=20');
+        var items=prods.data.items||[];
+        items.forEach(function(p){p._shop=allShops[i].name;});
+        data=data.concat(items);
+        if(data.length>200)break;
+      }
+      if(data.length>200)break;
+    }
+    document.getElementById('cnt-products').textContent=data.length+(data.length>=200?'+':'');
+    cols=['id','name','price','_shop','category_id','is_active'];
+  } else if(name==='categories'){
+    var shops=await apiReq('GET','/catalog/merchants?type=shop&limit=10');
+    var shops2=await apiReq('GET','/catalog/merchants?type=restaurant&limit=10');
+    var allShops=(shops.data.items||[]).concat(shops2.data.items||[]).slice(0,8);
+    for(var i=0;i<allShops.length;i++){
+      var cats=await apiReq('GET','/catalog/'+allShops[i].id+'/categories?limit=50');
+      var items=cats.data.items||[];
+      items.forEach(function(c){c._shop=allShops[i].name;});
+      data=data.concat(items);
+    }
+    document.getElementById('cnt-categories').textContent=data.length;
+    cols=['id','name','_shop','is_active'];
+  } else if(name==='users'){
+    el.innerHTML='<div class="error-msg">Эндпоинт /users недоступен через публичный API. Используй psql.</div>';
+    document.getElementById('cnt-users').textContent='N/A';
+    return;
+  }
+
+  tableData[name]=data;
+  renderTable(name,cols,data);
+}
+
+function renderTable(name,cols,data){
+  var el=document.getElementById('table-'+name);
+  if(!data.length){el.innerHTML='<div class="loading">Нет данных</div>';return;}
+  // Авто-определяем колонки если не заданы
+  if(!cols.length&&data.length)cols=Object.keys(data[0]).slice(0,8);
+
+  var html='<div class="table-wrap"><table><thead><tr>';
+  cols.forEach(function(c){html+='<th>'+c+'</th>';});
+  html+='</tr></thead><tbody>';
+  data.slice(0,200).forEach(function(row){
+    html+='<tr>';
+    cols.forEach(function(c){
+      var v=row[c];
+      var cls='';
+      if(v===null||v===undefined){cls=' class="td-null"';v='null';}
+      else if(typeof v==='boolean'){cls=v?' class="td-bool-t"':' class="td-bool-f"';}
+      else if(typeof v==='number'){cls=' class="td-num"';}
+      else if(typeof v==='string'&&(c.indexOf('at')>-1||c.indexOf('date')>-1)){cls=' class="td-date"';v=v.substring(0,16);}
+      html+='<td'+cls+' title="'+String(v).replace(/"/g,'&quot;')+'">'+String(v).substring(0,50)+'</td>';
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  if(data.length>200)html+='<div class="pagination">Показано 200 из '+data.length+' записей</div>';
+  el.innerHTML=html;
+}
+
+function filterTableRows(name,q){
+  var data=tableData[name]||[];
+  if(!q){renderTable(name,TABLE_COLS[name]||[],data);return;}
+  var ql=q.toLowerCase();
+  var filtered=data.filter(function(row){
+    return Object.values(row).some(function(v){return String(v).toLowerCase().indexOf(ql)>-1;});
+  });
+  renderTable(name,TABLE_COLS[name]||[],filtered);
+}
+
+// ==================== SECTION NAV ====================
+function showSection(name){
+  document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
+  document.querySelectorAll('.sb-item').forEach(function(s){s.classList.remove('active');});
+  var sec=document.getElementById('section-'+name);
+  if(sec)sec.classList.add('active');
+  event&&event.target&&event.target.classList.add('active');
+  // Загружаем данные если таблица
+  var tables=['shops','products','categories','orders','users','cart','profiles'];
+  if(tables.indexOf(name)>-1&&!tableData[name]){loadTable(name);}
+}
+
+// ==================== API TESTER ====================
+var QUICK=[
+  {label:'/health',method:'GET',url:'/health'},
+  {label:'/profile',method:'GET',url:'/profile'},
+  {label:'/orders',method:'GET',url:'/orders?limit=10'},
+  {label:'/cart',method:'GET',url:'/cart'},
+  {label:'merchants/shop',method:'GET',url:'/catalog/merchants?type=shop&limit=10'},
+  {label:'merchants/rest',method:'GET',url:'/catalog/merchants?type=restaurant&limit=10'},
+  {label:'/search',method:'GET',url:'/search?q=молоко&type=shop&limit=5'},
+];
+function buildQuickBtns(){
+  var el=document.getElementById('quick-btns');
+  el.innerHTML=QUICK.map(function(q){
+    return '<div class="quick-btn" onclick="setQuick(\''+q.method+'\',\''+q.url+'\')">'+q.method+' '+q.label+'</div>';
+  }).join('');
+}
+function setQuick(method,url){
+  document.getElementById('req-method').value=method;
+  document.getElementById('req-url').value=url;
+}
+function clearToken(){document.getElementById('api-token').value='';}
+
+async function sendApiRequest(){
+  var method=document.getElementById('req-method').value;
+  var url=document.getElementById('req-url').value.trim();
+  var bodyStr=document.getElementById('req-body').value.trim();
+  var body=null;
+  if(bodyStr){try{body=JSON.parse(bodyStr);}catch(e){alert('Невалидный JSON в body');return;}}
+  if(!url.startsWith('/'))url='/'+url;
+
+  var t0=Date.now();
+  var result=await apiReq(method,url,body);
+  var ms=Date.now()-t0;
+
+  var resEl=document.getElementById('api-response');
+  var statusClass=result.ok?'status-ok':'status-err';
+  resEl.innerHTML='<div class="response-meta">'
+    +'<span class="'+statusClass+'">'+result.status+'</span>'
+    +'<span>'+ms+'ms</span>'
+    +'<span>'+method+' '+url+'</span>'
+    +'</div>'
+    +'<div class="response-box '+(result.ok?'ok':'err')+'">'+JSON.stringify(result.data,null,2)+'</div>';
+}
+
+// Стартуем
+window.onload=function(){
+  // Если токен есть в localStorage — подставляем
+  var t=localStorage.getItem('sabad_token');
+  if(t){document.getElementById('api-token').value=t;}
+};
+</script>
+</body>
+</html>

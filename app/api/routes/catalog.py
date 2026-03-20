@@ -91,25 +91,38 @@ async def search_products(
     db: Database = Depends(get_db),
 ) -> CursorPage:
     cursor_id = _parse_cursor(cursor)
-    like = f"%{q.strip().lower()}%"
+    q_clean = q.strip().lower()
+    like = f"%{q_clean}%"
     async with db.conn() as conn:
         cur = await conn.execute(
             """
-            SELECT p.*, s.name AS merchant_name, s.business_type
+            SELECT p.*, s.name AS merchant_name, s.business_type,
+                   GREATEST(
+                       similarity(lower(p.name), $3),
+                       similarity(lower(COALESCE(p.description,'')), $3),
+                       similarity(lower(COALESCE(p.keywords_norm,'')), $3)
+                   ) AS sim
             FROM products p
             JOIN shops s ON s.id = p.shop_id
-            WHERE s.business_type=?
-              AND p.is_active=1
-              AND p.id>?
+            WHERE s.business_type = $1
+              AND p.is_active = 1
+              AND p.id > $2
               AND (
-                lower(p.name) LIKE ?
-                OR lower(COALESCE(p.description, '')) LIKE ?
-                OR lower(COALESCE(p.keywords_norm, '')) LIKE ?
+                lower(p.name) LIKE $4
+                OR lower(COALESCE(p.description, '')) LIKE $4
+                OR lower(COALESCE(p.keywords_norm, '')) LIKE $4
+                OR similarity(lower(p.name), $3) > 0.25
+                OR similarity(lower(COALESCE(p.keywords_norm,'')), $3) > 0.25
               )
-            ORDER BY p.id ASC
-            LIMIT ?
+            ORDER BY
+              CASE WHEN lower(p.name) LIKE $4 THEN 0
+                   WHEN lower(p.name) LIKE $5 THEN 1
+                   ELSE 2 END,
+              sim DESC,
+              p.id ASC
+            LIMIT $6
             """,
-            (type, cursor_id, like, like, like, limit + 1),
+            (type, cursor_id, q_clean, like, f"{q_clean}%", limit + 1),
         )
         page = [dict(r) for r in await cur.fetchall()]
     next_cursor = _build_next_cursor(page, limit)
