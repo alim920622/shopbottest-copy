@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ёвар — Test v7</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:monospace;background:#111;color:#e0e0e0;padding:20px;max-width:1100px;margin:0 auto}
+h2{color:#5DCAA5;margin-bottom:4px;font-size:15px}
+.sub{font-size:11px;color:#555;margin-bottom:16px}
+.row{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+input{background:#1e1e1e;border:1px solid #333;color:#e0e0e0;padding:8px 12px;border-radius:4px;font-family:monospace;font-size:13px;outline:none;flex:1}
+input:focus{border-color:#5DCAA5}
+button{padding:8px 14px;background:#5DCAA5;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:700;font-size:12px;white-space:nowrap}
+button:hover{opacity:.85}
+button.sec{background:#1e1e1e;color:#aaa;border:1px solid #333}
+button.red{background:#3d1a1a;color:#f87171;border:1px solid #5a2d2d}
+button.red:hover{background:#5a2020}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.preset{padding:4px 10px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;font-size:11px;color:#888;cursor:pointer}
+.preset:hover{border-color:#5DCAA5;color:#5DCAA5}
+
+.layout{display:grid;grid-template-columns:1fr 340px;gap:16px}
+
+/* LEFT - Steps */
+.steps{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+.step{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;overflow:hidden}
+.step-head{padding:7px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #222}
+.step-head.blue{background:#0d1a2e;color:#60a5fa}
+.step-head.yellow{background:#1f1a0a;color:#fbbf24}
+.step-body{padding:10px}
+pre{font-size:10px;white-space:pre-wrap;word-break:break-all;line-height:1.5;max-height:220px;overflow:auto;color:#ccc}
+.badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;margin-bottom:6px}
+.b-ok{background:#0a2010;color:#5DCAA5;border:1px solid #1a4020}
+.b-err{background:#200a0a;color:#f87171;border:1px solid #401a1a}
+.b-skip{background:#1a1a1a;color:#444;border:1px solid #2a2a2a}
+.b-wait{background:#1a1a1a;color:#555;border:1px solid #2a2a2a}
+.b-ms{background:#0a0a20;color:#60a5fa;border:1px solid #1a1a40}
+
+.result-box{background:#0d1a0d;border:1px solid #1a3a1a;border-radius:6px;padding:12px;margin-top:10px}
+.result-title{font-size:11px;color:#5DCAA5;margin-bottom:8px;font-weight:700}
+.card{background:#111;border:1px solid #222;border-radius:4px;padding:7px 10px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center}
+.card-name{font-size:12px;color:#e0e0e0}
+.card-shop{font-size:10px;color:#555;margin-top:1px}
+.card-price{font-size:12px;color:#5DCAA5;font-weight:700;white-space:nowrap}
+
+/* RIGHT - History */
+.hist-panel{background:#141414;border:1px solid #222;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;max-height:600px}
+.hist-head{padding:8px 12px;background:#1a1a1a;border-bottom:1px solid #222;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.hist-title{font-size:11px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.hist-btns{display:flex;gap:6px}
+.hist-list{overflow-y:auto;flex:1}
+.hist-item{padding:8px 12px;border-bottom:1px solid #1a1a1a;cursor:pointer;transition:background .1s}
+.hist-item:hover{background:#1e1e1e}
+.hist-item.active{background:#0d1a0d;border-left:2px solid #5DCAA5}
+.hi-query{font-size:12px;color:#e0e0e0;margin-bottom:3px}
+.hi-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.hi-badge{font-size:9px;padding:1px 5px;border-radius:8px}
+.hi-direct{background:#0a2010;color:#5DCAA5}
+.hi-corrected{background:#1f1a0a;color:#fbbf24}
+.hi-notfound{background:#200a0a;color:#f87171}
+.hi-similar{background:#1a0d2e;color:#c084fc}
+.chat-bubble-out{align-self:flex-end;background:#2d2040;color:#e0e0e0;padding:8px 12px;border-radius:12px 12px 2px 12px;font-size:12px;max-width:80%}
+.chat-bubble-in{align-self:flex-start;background:#1a1a2e;color:#e0e0e0;padding:8px 12px;border-radius:12px 12px 12px 2px;font-size:12px;max-width:90%}
+.chat-card{background:#111;border:1px solid #2a2a3a;border-radius:6px;padding:7px 10px;margin-top:5px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.chat-card-name{font-size:12px;color:#e0e0e0;font-weight:500}
+.chat-card-shop{font-size:10px;color:#555;margin-top:1px}
+.chat-card-price{font-size:12px;color:#5DCAA5;font-weight:700;white-space:nowrap}
+.chat-card-btn{font-size:10px;padding:3px 8px;background:#5DCAA5;color:#000;border:none;border-radius:4px;cursor:default;font-weight:700}
+.hi-time{font-size:9px;color:#444}
+.hist-empty{padding:20px;text-align:center;color:#444;font-size:12px}
+
+.stats-row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.stat{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:6px 12px;font-size:11px;color:#888}
+.stat span{color:#e0e0e0;font-weight:700;margin-right:4px}
+</style>
+</head>
+<body>
+
+<h2>⚡ Ёвар Cascade Search Tester v7</h2>
+<div class="sub">Каскадный поиск: ① прямой API → ② Ёвар (если не нашёл) → ③ повторный API · v7</div>
+
+<div class="row">
+  <input id="q" placeholder="Запрос: молоко, ест у вас ккефирр, у вас есть хлеб..." onkeydown="if(event.key==='Enter')run()"/>
+  <button onclick="run()">▶ Тест</button>
+  <button class="sec" onclick="clearCur()">✕ Очистить</button>
+</div>
+
+<div class="presets">
+  <div class="preset" onclick="setQ('молоко')">молоко</div>
+  <div class="preset" onclick="setQ('кефирр')">кефирр</div>
+  <div class="preset" onclick="setQ('ест у вас ккефирр')">ест у вас ккефирр</div>
+  <div class="preset" onclick="setQ('у вас есть хлеб')">у вас есть хлеб</div>
+  <div class="preset" onclick="setQ('плав')">плав (опечатка)</div>
+  <div class="preset" onclick="setQ('шашлык')">шашлык</div>
+  <div class="preset" onclick="setQ('помидор')">помидор</div>
+  <div class="preset" onclick="setQ('qwerty123')">qwerty123 (нет)</div>
+</div>
+
+<div class="stats-row">
+  <div class="stat"><span id="s-total">0</span>запросов</div>
+  <div class="stat"><span id="s-direct">0</span>прямой поиск</div>
+  <div class="stat"><span id="s-corrected">0</span>через коррекцию</div>
+  <div class="stat"><span id="s-similar">0</span>через похожие</div>
+  <div class="stat"><span id="s-notfound">0</span>не найдено</div>
+</div>
+
+<div class="layout">
+  <!-- LEFT -->
+  <div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-head blue">① API /search прямой</div>
+        <div class="step-body">
+          <div id="b1" class="badge b-wait">ожидание</div>
+          <pre id="p1">—</pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-head yellow">② Ёвар /correct</div>
+        <div class="step-body">
+          <div id="b2" class="badge b-wait">ожидание</div>
+          <pre id="p2">—</pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-head blue">③ API /search повторный</div>
+        <div class="step-body">
+          <div id="b3" class="badge b-wait">ожидание</div>
+          <pre id="p3">—</pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-head" style="background:#1a0d2e;color:#c084fc;border-bottom:1px solid #222">④ API /search похожие</div>
+        <div class="step-body">
+          <div id="b4" class="badge b-wait">ожидание</div>
+          <pre id="p4">—</pre>
+        </div>
+      </div>
+    </div>
+    <div class="result-box" id="result-box" style="display:none">
+      <div class="result-title" id="result-title"></div>
+      <div id="result-cards"></div>
+    </div>
+
+    <!-- ШАГ 5 — что видит пользователь в чате -->
+    <div style="margin-top:12px;background:#0d0d14;border:1px solid #2a2040;border-radius:6px;overflow:hidden" id="user-view-wrap" style="display:none">
+      <div style="padding:7px 12px;background:#1a1428;border-bottom:1px solid #2a2040;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#c084fc">⑤ Что видит пользователь в чате Ёвара</div>
+      <div style="padding:12px" id="user-view">
+        <!-- Имитация чата -->
+        <div style="display:flex;flex-direction:column;gap:8px" id="chat-preview"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT - History -->
+  <div class="hist-panel">
+    <div class="hist-head">
+      <div class="hist-title">История (<span id="hist-cnt">0</span>)</div>
+      <div class="hist-btns">
+        <button class="sec" style="padding:4px 8px;font-size:10px" onclick="exportJSON()">↓ JSON</button>
+        <button class="sec" style="padding:4px 8px;font-size:10px" onclick="exportCSV()">↓ CSV</button>
+        <button class="red" style="padding:4px 8px;font-size:10px" onclick="clearHistory()">✕</button>
+      </div>
+    </div>
+    <div class="hist-list" id="hist-list">
+      <div class="hist-empty">История пуста — запустите тест</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var API='https://sabad.duckdns.org/api';
+var history_=JSON.parse(localStorage.getItem('yovar_history')||'[]');
+var currentEntry=null;
+
+renderHistory();
+updateStats();
+
+function setQ(q){document.getElementById('q').value=q;run();}
+
+function clearCur(){
+  ['p1','p2','p3','p4'].forEach(function(id){document.getElementById(id).textContent='—';});
+  ['b1','b2','b3','b4'].forEach(function(id){setBadge(id,null,'ожидание');});
+  document.getElementById('result-box').style.display='none';
+  var uvw=document.getElementById('user-view-wrap');if(uvw)uvw.style.display='none';
+  var cp=document.getElementById('chat-preview');if(cp)cp.innerHTML='';
+}
+
+function setBadge(id,ok,text){
+  var el=document.getElementById(id);
+  el.className='badge '+(ok===null?'b-wait':ok===false?'b-err':ok===true?'b-ok':'b-skip');
+  el.textContent=text;
+}
+
+// Стоп-слова которые не нужно искать отдельно
+var STOP_WORDS=['шт','кг','г','л','мл','шт.','кг.','до','от','и','в','на','с','по','за','из','для','или'];
+
+function splitQuery(q){
+  // Разбиваем на слова, фильтруем стоп-слова, числа и короткие слова
+  return q.trim().split(/[\s,]+/).filter(function(w){
+    w=w.toLowerCase().replace(/[.,!?]/g,'');
+    return w.length>2 && !/^\d+$/.test(w) && STOP_WORDS.indexOf(w)===-1;
+  });
+}
+
+async function searchSingle(q){
+  var t0=Date.now();
+  try{
+    var rs=await Promise.all([
+      fetch(API+'/search?q='+encodeURIComponent(q)+'&type=shop&limit=5').then(function(r){return r.json();}),
+      fetch(API+'/search?q='+encodeURIComponent(q)+'&type=restaurant&limit=5').then(function(r){return r.json();})
+    ]);
+    var items=(rs[0].items||[]).concat(rs[1].items||[]);
+    return {items:items,ms:Date.now()-t0,error:null};
+  }catch(e){return {items:[],ms:Date.now()-t0,error:e.message};}
+}
+
+async function search(q){
+  var t0=Date.now();
+  var words=splitQuery(q);
+  // Если одно слово или короткий запрос — ищем как одну строку
+  if(words.length<=1){
+    return await searchSingle(q);
+  }
+  // Несколько слов — ищем каждое отдельно параллельно
+  try{
+    var results=await Promise.all(words.map(function(w){return searchSingle(w);}));
+    var seen={};
+    var allItems=[];
+    results.forEach(function(r){
+      (r.items||[]).forEach(function(it){
+        var k=(it.id||it.product_id)+'';
+        if(!seen[k]){seen[k]=true;allItems.push(it);}
+      });
+    });
+    // Сортируем по sim (релевантности)
+    allItems.sort(function(a,b){return (b.sim||0)-(a.sim||0);});
+    // Определяем какие слова ничего не нашли
+    var notFoundWords=[];
+    words.forEach(function(w,i){
+      if(!(results[i]&&results[i].items&&results[i].items.length)){
+        notFoundWords.push(w);
+      }
+    });
+    return {items:allItems,ms:Date.now()-t0,error:null,words:words,notFoundWords:notFoundWords};
+  }catch(e){return {items:[],ms:Date.now()-t0,error:e.message};}
+}
+
+async function correct(q){
+  var t0=Date.now();
+  try{
+    var r=await fetch(API+'/yovar/correct',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query:q,results_count:0})});
+    var d=await r.json();
+    return {data:d,ms:Date.now()-t0,error:null};
+  }catch(e){return {data:null,ms:Date.now()-t0,error:e.message};}
+}
+
+async function run(){
+  var q=document.getElementById('q').value.trim();
+  if(!q)return;
+  clearCur();
+  document.getElementById('result-box').style.display='none';
+
+  var entry={
+    id:Date.now(),
+    ts:new Date().toISOString(),
+    query:q,
+    path:null,
+    step1:{found:0,ms:0,items:[],error:null},
+    step2:{skipped:true,corrected:null,similar:[],action:null,comment:null,ms:0,error:null},
+    step3:{skipped:true,found:0,ms:0,items:[],error:null},
+    step4:{skipped:true,found:0,ms:0,items:[],queries:[]},
+    final:{found:0,items:[]}
+  };
+  currentEntry=entry;
+
+  // ШАГ 1
+  setBadge('b1',null,'⏳ поиск...');
+  document.getElementById('p1').textContent='GET /search?q='+q+'\n(shop + restaurant)';
+  var s1=await search(q);
+  entry.step1={found:s1.items.length,ms:s1.ms,items:s1.items.slice(0,4),error:s1.error,notFoundWords:s1.notFoundWords||[]};
+  setBadge('b1',s1.items.length>0,'✓ '+s1.items.length+' найдено ('+s1.ms+'ms)');
+  document.getElementById('p1').textContent=JSON.stringify({query:q,found:s1.items.length,ms:s1.ms,items:s1.items.slice(0,3).map(function(i){return{name:i.name,price:i.price,shop:i.merchant_name||i.shop_name};})},null,2);
+
+  if(s1.items.length>0){
+    entry.path='direct';
+    setBadge('b2','skip','— пропущен');document.getElementById('p2').textContent='(прямой поиск дал результат)';
+    setBadge('b3','skip','— пропущен');document.getElementById('p3').textContent='(не нужен)';
+    setBadge('b4','skip','— пропущен');document.getElementById('p4').textContent='(не нужен)';
+    entry.final={found:s1.items.length,items:s1.items.slice(0,4)};
+    showResult(q,s1.items,null,'direct',s1.notFoundWords||[]);
+    saveEntry(entry);return;
+  }
+
+  // ШАГ 2
+  setBadge('b2',null,'⏳ Ёвар исправляет...');
+  document.getElementById('p2').textContent='POST /yovar/correct\n{"query":"'+q+'","results_count":0}';
+  var c=await correct(q);
+  var similar=c.data?c.data.similar||[]:[];
+  entry.step2={skipped:false,corrected:c.data?c.data.corrected:null,similar:similar,action:c.data?c.data.action:null,comment:c.data?c.data.comment:null,ms:c.ms,error:c.error};
+  setBadge('b2',c.data&&c.data.corrected,'✓ ответ ('+c.ms+'ms)');
+  document.getElementById('p2').textContent=JSON.stringify(c.data,null,2);
+
+  if(!c.data||(!c.data.corrected&&(!c.data.similar||!c.data.similar.length))){
+    entry.path='not_found';
+    setBadge('b3','skip','— пропущен');document.getElementById('p3').textContent='(Ёвар не смог исправить)';
+    setBadge('b4','skip','— пропущен');document.getElementById('p4').textContent='(не нужен)';
+    entry.final={found:0,items:[]};
+    showResult(q,[],c.data,'not_found');saveEntry(entry);return;
+  }
+
+  // ШАГ 3 — если нет corrected но есть similar — пропускаем шаг 3
+  var corrected=c.data.corrected;
+  var allYovarItems=c.data.items&&c.data.items.length?c.data.items:(corrected?[corrected]:[]);
+  if(!corrected&&similar.length>0){
+    setBadge('b3','skip','— нет исправления, ищем по похожим');
+    document.getElementById('p3').textContent='(corrected пустой — переходим к similar)';
+  } else if(allYovarItems.length>0){
+    setBadge('b3',null,'⏳ поиск «'+allYovarItems.join(', ')+'»...');
+    document.getElementById('p3').textContent='GET /search по: '+allYovarItems.join(', ')+'\n(исправлено из «'+q+'»)';
+    var s3Results=await Promise.all(allYovarItems.map(function(item){return search(item);}));
+    var seen3={};var s3Items=[];
+    s3Results.forEach(function(r){
+      (r.items||[]).forEach(function(it){
+        var k=(it.id||it.product_id)+'';
+        if(!seen3[k]){seen3[k]=true;s3Items.push(it);}
+      });
+    });
+    s3Items.sort(function(a,b){return (b.sim||0)-(a.sim||0);});
+    var s3={items:s3Items,ms:0};
+    entry.step3={skipped:false,found:s3Items.length,ms:0,items:s3Items.slice(0,4),error:null};
+    setBadge('b3',s3Items.length>0,'✓ '+s3Items.length+' найдено');
+    document.getElementById('p3').textContent=JSON.stringify({corrected_queries:allYovarItems,original:q,found:s3Items.length,items:s3Items.slice(0,3).map(function(i){return{name:i.name,price:i.price,shop:i.merchant_name||i.shop_name};})},null,2);
+    if(s3Items.length>0){
+      entry.path='corrected';
+      setBadge('b4','skip','— пропущен');document.getElementById('p4').textContent='(нашли на шаге 3)';
+      entry.final={found:s3Items.length,items:s3Items.slice(0,4),corrected_query:corrected};
+      showResult(corrected,s3Items,c.data,'corrected');saveEntry(entry);return;
+    }
+  }
+
+  // ШАГ 4 — поиск по похожим (similar)
+  if(similar.length>0){
+    setBadge('b4',null,'⏳ ищу похожее: '+similar.join(', ')+'...');
+    document.getElementById('p4').textContent='Ищу аналоги: '+similar.join(', ');
+    var t4=Date.now();
+    var similarResults=[];
+    var done=0;
+    await new Promise(function(resolve){
+      similar.forEach(function(s){
+        search(s).then(function(r){
+          similarResults=similarResults.concat(r.items);
+          done++;if(done===similar.length)resolve();
+        }).catch(function(){done++;if(done===similar.length)resolve();});
+      });
+    });
+    // Убираем дубли
+    var seen={};
+    similarResults=similarResults.filter(function(it){
+      var k=(it.id||it.product_id)+'';if(seen[k])return false;seen[k]=true;return true;
+    });
+    var ms4=Date.now()-t4;
+    entry.step4={skipped:false,found:similarResults.length,ms:ms4,items:similarResults.slice(0,4),queries:similar};
+    setBadge('b4',similarResults.length>0,'✓ '+similarResults.length+' похожих ('+ms4+'ms)');
+    document.getElementById('p4').textContent=JSON.stringify({similar_queries:similar,found:similarResults.length,ms:ms4,items:similarResults.slice(0,3).map(function(i){return{name:i.name,price:i.price};})},null,2);
+
+    if(similarResults.length>0){
+      entry.path='similar';
+      entry.final={found:similarResults.length,items:similarResults.slice(0,4),similar_queries:similar};
+      showResult(corrected||q,similarResults,c.data,'similar');saveEntry(entry);return;
+    }
+  } else {
+    setBadge('b4','skip','— нет аналогов');
+    document.getElementById('p4').textContent='(Ёвар не предложил аналогов)';
+  }
+
+  entry.path='not_found';
+  entry.final={found:0,items:[]};
+  showResult(q,[],c.data,'not_found');
+  saveEntry(entry);
+}
+
+function pluralRu(n){
+  // 1 вариант, 2-4 варианта, 5+ вариантов
+  var n10=n%10,n100=n%100;
+  if(n10===1&&n100!==11)return n+' вариант';
+  if(n10>=2&&n10<=4&&(n100<10||n100>=20))return n+' варианта';
+  return n+' вариантов';
+}
+
+function renderUserView(query,items,path,corrected,notFoundWords){
+  var wrap=document.getElementById('user-view-wrap');
+  var preview=document.getElementById('chat-preview');
+  if(!wrap)return{text:'',cards_count:0};
+  wrap.style.display='block';
+  var botText='';
+  var cnt=(items||[]).length;
+  if(path==='direct'){botText=cnt===1?'Нашёл:':'Нашёл '+pluralRu(cnt)+':';}
+  else if(path==='corrected'){botText='Нашёл по запросу «'+(corrected||query)+'»:';}
+  else if(path==='similar'){botText='«'+(corrected||query)+'» нет в каталоге, но есть похожее:';}
+  else{botText='«'+query+'» не найдено в каталоге.';}
+  var cardsHtml=(items||[]).slice(0,4).map(function(it){
+    return '<div class="chat-card">'
+      +'<div><div class="chat-card-name">'+it.name+'</div><div class="chat-card-shop">'+(it.merchant_name||it.shop_name||'')+'</div></div>'
+      +'<div style="display:flex;align-items:center;gap:5px"><span class="chat-card-price">'+(it.price||0)+' сом</span>'
+      +'<button class="chat-card-btn">+</button></div></div>';
+  }).join('');
+  var notFoundHtml='';
+  if(notFoundWords&&notFoundWords.length&&(items||[]).length>0){
+    notFoundHtml='<div style="margin-top:6px;font-size:10px;color:#888">⚠️ Не нашлось в каталоге: '+notFoundWords.join(', ')+'</div>';
+  }
+  preview.innerHTML='<div class="chat-bubble-out">'+query+'</div>'
+    +'<div class="chat-bubble-in">'+botText+(cardsHtml?'<div style="margin-top:6px">'+cardsHtml+'</div>':'')+notFoundHtml+'</div>';
+  return{text:botText,cards_count:(items||[]).length,not_found:notFoundWords};
+}
+
+function showResult(query,items,corrInfo,path,notFoundWords){
+  notFoundWords=notFoundWords||[];
+  var box=document.getElementById('result-box');
+  var title=document.getElementById('result-title');
+  var cards=document.getElementById('result-cards');
+  box.style.display='block';
+  var corrected=corrInfo?corrInfo.corrected:null;
+  if(!items||!items.length){
+    title.textContent='✗ Не найдено в каталоге';
+    cards.innerHTML='<div style="color:#555;font-size:11px;padding:4px 0">Нет результатов</div>';
+    var uv=renderUserView(query,[],path,corrected,notFoundWords);
+    if(currentEntry)currentEntry.user_result=uv;
+    return;
+  }
+  var prefix='';
+  if(path==='direct')prefix='✓ Найдено напрямую — '+pluralRu(items.length);
+  else if(path==='corrected')prefix='✓ Найдено по «'+(corrected||query)+'» — '+pluralRu(items.length);
+  else if(path==='similar')prefix='⚡ «'+(corrected||query)+'» нет, похожее — '+pluralRu(items.length);
+  else prefix='Найдено '+pluralRu(items.length);
+  if(notFoundWords.length)prefix+=' · ⚠️ не нашлось: '+notFoundWords.join(', ');
+  title.textContent=prefix;
+  cards.innerHTML=items.slice(0,4).map(function(it){
+    return '<div class="card"><div><div class="card-name">'+it.name+'</div><div class="card-shop">'+(it.merchant_name||it.shop_name||'')+'</div></div>'
+      +'<div class="card-price">'+(it.price||0)+' сом</div></div>';
+  }).join('');
+  var uv=renderUserView(query,items,path,corrected,notFoundWords);
+  if(currentEntry)currentEntry.user_result=uv;
+}
+
+// ===== HISTORY =====
+function saveEntry(entry){
+  history_.unshift(entry);
+  if(history_.length>200)history_=history_.slice(0,200);
+  localStorage.setItem('yovar_history',JSON.stringify(history_));
+  renderHistory();
+  updateStats();
+}
+
+function renderHistory(){
+  var el=document.getElementById('hist-list');
+  document.getElementById('hist-cnt').textContent=history_.length;
+  if(!history_.length){
+    el.innerHTML='<div class="hist-empty">История пуста</div>';
+    return;
+  }
+  el.innerHTML=history_.map(function(e,i){
+    var pathBadge=e.path==='direct'
+      ?'<span class="hi-badge hi-direct">прямой</span>'
+      :e.path==='corrected'
+      ?'<span class="hi-badge hi-corrected">коррекция→'+(e.step2.corrected||'?')+'</span>'
+      :e.path==='similar'
+      ?'<span class="hi-badge hi-similar">похожее→'+(e.step4&&e.step4.queries?e.step4.queries[0]||'?':'?')+'</span>'
+      :'<span class="hi-badge hi-notfound">не найдено</span>';
+    var found=e.final.found;
+    var t=new Date(e.ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    return '<div class="hist-item" onclick="loadEntry('+i+')">'
+      +'<div class="hi-query">'+e.query+'</div>'
+      +(e.user_result&&e.user_result.text?'<div style="font-size:10px;color:#5DCAA5;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">💬 '+e.user_result.text+'</div>':'')
+      +'<div class="hi-meta">'+pathBadge
+      +(found?'<span class="hi-badge hi-direct">'+found+' товар(а)</span>':'')
+      +'<span class="hi-time">'+t+'</span>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function loadEntry(i){
+  var e=history_[i];
+  document.getElementById('q').value=e.query;
+  // Показываем шаги
+  document.getElementById('p1').textContent=JSON.stringify(e.step1,null,2);
+  setBadge('b1',e.step1.found>0,e.step1.found>0?'✓ '+e.step1.found+' найдено':'✗ 0');
+  if(e.step2.skipped){
+    setBadge('b2','skip','— пропущен');
+    document.getElementById('p2').textContent='(не нужен)';
+  } else {
+    setBadge('b2',e.step2.corrected?true:false,'ответ '+e.step2.ms+'ms');
+    document.getElementById('p2').textContent=JSON.stringify(e.step2,null,2);
+  }
+  if(e.step3.skipped){
+    setBadge('b3','skip','— пропущен');
+    document.getElementById('p3').textContent='(не нужен)';
+  } else {
+    setBadge('b3',e.step3.found>0,e.step3.found>0?'✓ '+e.step3.found:' ✗ 0');
+    document.getElementById('p3').textContent=JSON.stringify(e.step3,null,2);
+  }
+  showResult(e.step2.corrected||e.query,e.final.items,e.step2.skipped?null:e.step2);
+  // Подсвечиваем
+  document.querySelectorAll('.hist-item').forEach(function(el,j){el.classList.toggle('active',j===i);});
+}
+
+function updateStats(){
+  var total=history_.length;
+  var direct=history_.filter(function(e){return e.path==='direct';}).length;
+  var corrected=history_.filter(function(e){return e.path==='corrected';}).length;
+  var similar=history_.filter(function(e){return e.path==='similar';}).length;
+  var notfound=history_.filter(function(e){return e.path==='not_found';}).length;
+  document.getElementById('s-total').textContent=total;
+  document.getElementById('s-direct').textContent=direct;
+  document.getElementById('s-corrected').textContent=corrected;
+  document.getElementById('s-notfound').textContent=notfound;
+  var simEl=document.getElementById('s-similar');
+  if(simEl)simEl.textContent=similar;
+}
+
+function clearHistory(){
+  if(!confirm('Очистить всю историю?'))return;
+  history_=[];
+  localStorage.removeItem('yovar_history');
+  renderHistory();
+  updateStats();
+}
+
+function exportJSON(){
+  var blob=new Blob([JSON.stringify(history_,null,2)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='yovar_history_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+}
+
+function exportCSV(){
+  var rows=[['id','ts','query','path','step1_found','step1_ms','step2_corrected','step2_similar','step2_ms','step3_found','step3_ms','step4_found','step4_queries','step4_ms','final_found','user_message']];
+  history_.forEach(function(e){
+    rows.push([
+      e.id,e.ts,
+      '"'+e.query.replace(/"/g,'""')+'"',
+      e.path||'',
+      e.step1.found,e.step1.ms,
+      '"'+(e.step2.corrected||'').replace(/"/g,'""')+'"',
+      '"'+((e.step2.similar||[]).join('|')).replace(/"/g,'""')+'"',
+      e.step2.ms||0,
+      e.step3.found||0,e.step3.ms||0,
+      e.step4?(e.step4.found||0):0,
+      '"'+((e.step4&&e.step4.queries||[]).join('|')).replace(/"/g,'""')+'"',
+      e.step4?(e.step4.ms||0):0,
+      e.final.found,
+      '"'+((e.user_result&&e.user_result.text)||'').replace(/"/g,'""')+'"'
+    ]);
+  });
+  var csv=rows.map(function(r){return r.join(',');}).join('\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='yovar_history_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
