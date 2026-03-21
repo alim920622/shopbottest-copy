@@ -398,10 +398,18 @@ function renderUserView(query,items,path,corrected,notFoundWords){
   wrap.style.display='block';
   var botText='';
   var cnt=(items||[]).length;
-  if(path==='direct'){botText=cnt===1?'Нашёл:':'Нашёл '+pluralRu(cnt)+':';}
-  else if(path==='corrected'){botText='Нашёл по запросу «'+(corrected||query)+'»:';}
-  else if(path==='similar'){botText='«'+(corrected||query)+'» нет в каталоге, но есть похожее:';}
-  else{botText='«'+query+'» не найдено в каталоге.';}
+  if(path==='direct'){
+    botText = 'Вот что нашёл 👇';
+  }
+  else if(path==='corrected'){
+    botText = 'Похоже, ты имел в виду «'+(corrected||query)+'» 👇';
+  }
+  else if(path==='similar'){
+    botText = 'Точного совпадения нет, но есть похожие варианты 👇';
+  }
+  else{
+    botText = 'Не смог найти это 😕 Попробуй, например: молоко, хлеб или кефир';
+  }
   var cardsHtml=(items||[]).slice(0,4).map(function(it){
     return '<div class="chat-card">'
       +'<div><div class="chat-card-name">'+it.name+'</div><div class="chat-card-shop">'+(it.merchant_name||it.shop_name||'')+'</div></div>'

@@ -419,3 +419,45 @@ INFO:     65.49.1.110:37545 - "GET http%3A//api.ipify.org/?format=json HTTP/1.1"
 INFO:     65.49.1.111:13991 - "CONNECT www.shadowserver.org%3A443 HTTP/1.1" 404 Not Found
 INFO:     16.58.56.214:46474 - "GET / HTTP/1.1" 404 Not Found
 WARNING:  Invalid HTTP request received.
+INFO:     16.58.56.214:35244 - "GET / HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     198.235.24.232:63702 - "GET / HTTP/1.1" 404 Not Found
+INFO:     205.210.31.139:57680 - "GET / HTTP/1.1" 404 Not Found
+INFO:     34.158.79.105:0 - "GET /.env HTTP/1.0" 404 Not Found
+INFO:     147.185.132.27:65020 - "GET / HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.153.126:7540 - "GET / HTTP/1.1" 404 Not Found
+INFO:     66.132.153.126:7544 - "PRI %2A HTTP/2.0" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     34.76.111.153:59054 - "GET / HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.153.126:61014 - "GET /sitemap.xml HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     45.79.207.129:35793 - "GET / HTTP/1.1" 404 Not Found
+INFO:     205.210.31.212:63294 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     66.228.53.46:6122 - "GET / HTTP/1.1" 404 Not Found
+INFO:     80.94.95.169:41294 - "GET /../../../../../../etc/passwd HTTP/1.1" 404 Not Found
+INFO:     175.211.25.50:44933 - "GET / HTTP/1.0" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     91.231.89.158:42947 - "GET / HTTP/1.1" 404 Not Found
+INFO:     91.231.89.74:47955 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     71.6.134.232:38234 - "GET / HTTP/1.1" 404 Not Found
+INFO:     71.6.134.232:58270 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     176.65.149.253:0 - "GET /.env HTTP/1.0" 404 Not Found
+INFO:     167.94.146.48:61060 - "GET / HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     167.94.146.48:54764 - "GET / HTTP/1.1" 404 Not Found
+INFO:     167.94.146.48:54766 - "PRI %2A HTTP/2.0" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     167.94.146.48:54832 - "GET /sitemap.xml HTTP/1.1" 404 Not Found
+INFO:     172.236.228.86:41820 - "GET / HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     198.235.24.183:61448 - "GET / HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     172.105.158.25:0 - "GET /v1/pods HTTP/1.0" 404 Not Found
+INFO:     72.14.182.123:0 - "GET /sonicos/tfa HTTP/1.0" 404 Not Found
+INFO:     72.14.182.123:0 - "GET /sonicos/auth HTTP/1.0" 404 Not Found
