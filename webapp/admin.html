@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sabad — Admin Panel</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#232634;--text:#e2e8f0;--text2:#8892a4;--border:#2d3348;--green:#5DCAA5;--red:#f87171;--blue:#60a5fa;--yellow:#fbbf24;--orange:#fb923c;--radius:8px;--font:'SF Mono','Fira Code',monospace}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+
+/* LOGIN */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,rgba(93,202,165,.08),transparent 60%)}
+.login-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px;width:340px}
+.login-logo{font-size:26px;font-weight:700;color:var(--green);margin-bottom:2px}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:28px}
+.field-label{font-size:11px;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.login-input{width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;outline:none;margin-bottom:14px;transition:border .2s}
+.login-input:focus{border-color:var(--green)}
+.login-btn{width:100%;padding:12px;background:var(--green);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s}
+.login-btn:hover{opacity:.88}
+.login-btn:disabled{opacity:.5;cursor:default}
+.login-err{font-size:12px;color:var(--red);margin-top:10px;text-align:center;display:none}
+
+/* PANEL */
+.panel{display:none;flex-direction:column;height:100vh}
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px;height:48px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.header-logo{font-size:15px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:8px}
+.header-right{display:flex;align-items:center;gap:16px}
+.api-status{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.status-dot.red{background:var(--red)}
+.logout-btn{font-size:12px;color:var(--text2);cursor:pointer;padding:5px 10px;border:1px solid var(--border);border-radius:5px;background:transparent}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+.body{display:flex;flex:1;overflow:hidden}
+.sidebar{width:210px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;display:flex;flex-direction:column}
+.sb-sec{padding:14px 14px 4px;font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.8px}
+.sb-item{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;font-size:13px;color:var(--text2);cursor:pointer;border-left:2px solid transparent;transition:all .15s}
+.sb-item:hover{background:var(--bg3);color:var(--text)}
+.sb-item.active{background:var(--bg3);color:var(--green);border-left-color:var(--green)}
+.sb-badge{font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:10px;color:var(--text2)}
+.sb-badge.green{background:rgba(93,202,165,.15);color:var(--green)}
+
+.content{flex:1;overflow:auto;padding:20px}
+.section{display:none}
+.section.active{display:block}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:border-color .15s}
+.stat-card:hover{border-color:var(--green)}
+.stat-val{font-size:30px;font-weight:700;color:var(--green);line-height:1}
+.stat-lbl{font-size:12px;color:var(--text2);margin-top:5px}
+.stat-sub{font-size:11px;color:var(--text2);margin-top:3px}
+
+/* TABLE */
+.tbl-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+.page-title{font-size:15px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
+.tbl-tools{display:flex;align-items:center;gap:8px}
+.search-input{padding:6px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;outline:none;width:180px}
+.search-input:focus{border-color:var(--blue)}
+.refresh-btn{padding:5px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:12px;color:var(--text2);cursor:pointer}
+.refresh-btn:hover{border-color:var(--green);color:var(--green)}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--bg3);padding:9px 12px;text-align:left;color:var(--text2);font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap;font-family:var(--font)}
+td{padding:8px 12px;border-bottom:.5px solid var(--border);color:var(--text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font);font-size:11px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.v-null{color:var(--text2);font-style:italic}
+.v-true{color:var(--green)}
+.v-false{color:var(--red)}
+.v-num{color:var(--blue)}
+.v-date{color:var(--yellow)}
+.v-status-new{background:rgba(251,191,36,.15);color:var(--yellow);padding:2px 7px;border-radius:10px;font-size:10px}
+.v-status-done{background:rgba(93,202,165,.15);color:var(--green);padding:2px 7px;border-radius:10px;font-size:10px}
+.v-status-active{background:rgba(96,165,250,.15);color:var(--blue);padding:2px 7px;border-radius:10px;font-size:10px}
+
+.pagination{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)}
+.pg-btn{padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text2);font-size:12px}
+.pg-btn:hover:not(:disabled){border-color:var(--green);color:var(--green)}
+.pg-btn:disabled{opacity:.4;cursor:default}
+.pg-info{color:var(--text2)}
+
+/* API TESTER */
+.quick-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.q-btn{padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font)}
+.q-btn:hover{border-color:var(--blue);color:var(--blue)}
+.req-row{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+.method-sel{padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--yellow);font-weight:700;font-size:13px;outline:none;width:95px;font-family:var(--font)}
+.url-inp{flex:1;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;outline:none;font-family:var(--font)}
+.url-inp:focus{border-color:var(--blue)}
+.send-btn{padding:8px 18px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer}
+.body-inp{width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:12px;font-family:var(--font);outline:none;min-height:70px;resize:vertical;margin-bottom:10px}
+.resp-meta{font-size:11px;color:var(--text2);margin-bottom:6px;display:flex;gap:12px;align-items:center}
+.resp-ok{color:var(--green);font-weight:700}
+.resp-err{color:var(--red);font-weight:700}
+.resp-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-family:var(--font);font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:420px;overflow-y:auto;color:var(--text);line-height:1.6}
+.resp-box.ok{border-color:rgba(93,202,165,.4)}
+.resp-box.err{border-color:rgba(248,113,113,.4)}
+
+.loading{color:var(--text2);font-size:13px;padding:30px;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">⚡ Sabad</div>
+    <div class="login-sub">Admin Panel · PostgreSQL</div>
+    <div class="field-label">Telegram ID</div>
+    <input class="login-input" type="number" id="tg-id" placeholder="Ваш Telegram user_id"/>
+    <div class="field-label">Пароль (admin secret)</div>
+    <input class="login-input" type="password" id="admin-secret" placeholder="sabad_admin_secret_2024" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Войти</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div class="panel" id="panel">
+  <div class="header">
+    <div class="header-logo">⚡ Sabad Admin <span style="font-size:11px;color:var(--text2);font-weight:400">PostgreSQL</span></div>
+    <div class="header-right">
+      <div class="api-status"><div class="status-dot" id="status-dot"></div><span id="status-txt">...</span></div>
+      <div style="font-size:12px;color:var(--text2)" id="admin-user"></div>
+      <div class="logout-btn" onclick="doLogout()">Выйти</div>
+    </div>
+  </div>
+  <div class="body">
+    <div class="sidebar">
+      <div class="sb-sec">Обзор</div>
+      <div class="sb-item active" onclick="nav('dashboard',this)">📊 Dashboard</div>
+      <div class="sb-sec">Таблицы БД</div>
+      <div class="sb-item" onclick="nav('shops',this)">🏪 shops <span class="sb-badge" id="b-shops">—</span></div>
+      <div class="sb-item" onclick="nav('products',this)">📦 products <span class="sb-badge" id="b-products">—</span></div>
+      <div class="sb-item" onclick="nav('categories',this)">🗂 categories <span class="sb-badge" id="b-categories">—</span></div>
+      <div class="sb-item" onclick="nav('orders',this)">🛒 orders <span class="sb-badge" id="b-orders">—</span></div>
+      <div class="sb-item" onclick="nav('users',this)">👤 users <span class="sb-badge" id="b-users">—</span></div>
+      <div class="sb-item" onclick="nav('cart',this)">🧺 cart <span class="sb-badge" id="b-cart">—</span></div>
+      <div class="sb-sec">Инструменты</div>
+      <div class="sb-item" onclick="nav('api-tester',this)">🔧 API Tester</div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="section active" id="sec-dashboard">
+        <div class="tbl-header">
+          <div class="page-title">📊 Dashboard</div>
+          <button class="refresh-btn" onclick="loadDashboard()">↻ Обновить</button>
+        </div>
+        <div class="stats-grid" id="stats-grid"><div class="loading">⏳ Загрузка...</div></div>
+        <div id="dash-extra"></div>
+      </div>
+
+      <!-- SHOPS -->
+      <div class="section" id="sec-shops">
+        <div class="tbl-header">
+          <div class="page-title">🏪 Магазины</div>
+          <div class="tbl-tools">
+            <input class="search-input" placeholder="Поиск..." oninput="filterRows('shops',this.value)"/>
+            <button class="refresh-btn" onclick="loadShops()">↻</button>
+          </div>
+        </div>
+        <div id="tbl-shops"><div class="loading">⏳</div></div>
+      </div>
+
+      <!-- PRODUCTS -->
+      <div class="section" id="sec-products">
+        <div class="tbl-header">
+          <div class="page-title">📦 Товары</div>
+          <div class="tbl-tools">
+            <input class="search-input" placeholder="Поиск..." oninput="filterRows('products',this.value)"/>
+            <button class="refresh-btn" onclick="loadProducts()">↻</button>
+          </div>
+        </div>
+        <div id="tbl-products"><div class="loading">⏳</div></div>
+        <div class="pagination" id="pg-products"></div>
+      </div>
+
+      <!-- CATEGORIES -->
+      <div class="section" id="sec-categories">
+        <div class="tbl-header">
+          <div class="page-title">🗂 Категории</div>
+          <div class="tbl-tools">
+            <input class="search-input" placeholder="Поиск..." oninput="filterRows('categories',this.value)"/>
+            <button class="refresh-btn" onclick="loadCategories()">↻</button>
+          </div>
+        </div>
+        <div id="tbl-categories"><div class="loading">⏳</div></div>
+      </div>
+
+      <!-- ORDERS -->
+      <div class="section" id="sec-orders">
+        <div class="tbl-header">
+          <div class="page-title">🛒 Заказы</div>
+          <div class="tbl-tools">
+            <input class="search-input" placeholder="Поиск..." oninput="filterRows('orders',this.value)"/>
+            <button class="refresh-btn" onclick="loadOrders()">↻</button>
+          </div>
+        </div>
+        <div id="tbl-orders"><div class="loading">⏳</div></div>
+        <div class="pagination" id="pg-orders"></div>
+      </div>
+
+      <!-- USERS -->
+      <div class="section" id="sec-users">
+        <div class="tbl-header">
+          <div class="page-title">👤 Пользователи</div>
+          <div class="tbl-tools">
+            <input class="search-input" placeholder="Поиск..." oninput="filterRows('users',this.value)"/>
+            <button class="refresh-btn" onclick="loadUsers()">↻</button>
+          </div>
+        </div>
+        <div id="tbl-users"><div class="loading">⏳</div></div>
+        <div class="pagination" id="pg-users"></div>
+      </div>
+
+      <!-- CART -->
+      <div class="section" id="sec-cart">
+        <div class="tbl-header">
+          <div class="page-title">🧺 Корзины</div>
+          <div class="tbl-tools">
+            <input class="search-input" placeholder="Поиск..." oninput="filterRows('cart',this.value)"/>
+            <button class="refresh-btn" onclick="loadCart()">↻</button>
+          </div>
+        </div>
+        <div id="tbl-cart"><div class="loading">⏳</div></div>
+      </div>
+
+      <!-- API TESTER -->
+      <div class="section" id="sec-api-tester">
+        <div class="tbl-header"><div class="page-title">🔧 API Tester</div></div>
+        <div style="margin-bottom:10px;font-size:12px;color:var(--text2)">JWT токен: <span id="cur-token" style="color:var(--green);font-family:var(--font);font-size:11px"></span></div>
+        <div class="quick-wrap" id="quick-btns"></div>
+        <div class="req-row">
+          <select class="method-sel" id="req-method"><option>GET</option><option>POST</option><option>PATCH</option><option>DELETE</option></select>
+          <input class="url-inp" id="req-url" value="/health"/>
+          <button class="send-btn" onclick="sendReq()">▶ Send</button>
+        </div>
+        <textarea class="body-inp" id="req-body" placeholder='{"key":"value"}'></textarea>
+        <div id="api-resp"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var API='https://sabad.duckdns.org/api';
+var SECRET='';
+var JWT='';
+var tableCache={};
+var tablePages={products:0,orders:0,users:0};
+var PAGE_SIZE=50;
+
+// ===== LOGIN =====
+async function doLogin(){
+  var tgId=document.getElementById('tg-id').value.trim();
+  var secret=document.getElementById('admin-secret').value.trim();
+  var errEl=document.getElementById('login-err');
+  var btn=document.getElementById('login-btn');
+  errEl.style.display='none';
+  if(!secret){errEl.textContent='Введите пароль';errEl.style.display='block';return;}
+
+  // Проверяем secret через /admin/stats
+  btn.disabled=true;btn.textContent='Проверка...';
+  try{
+    var r=await fetch(API+'/admin/stats?secret='+encodeURIComponent(secret));
+    if(!r.ok)throw new Error('Неверный пароль');
+    SECRET=secret;
+
+    // Если введён Telegram ID — получаем JWT
+    if(tgId){
+      var lr=await fetch(API+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telegram_user_id:parseInt(tgId)})});
+      if(lr.ok){var ld=await lr.json();JWT=ld.access_token||'';}
+    }
+
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('panel').style.display='flex';
+    if(tgId)document.getElementById('admin-user').textContent='TG: '+tgId;
+    document.getElementById('cur-token').textContent=JWT?JWT.substring(0,30)+'...':'(нет)';
+    init();
+  }catch(e){
+    errEl.textContent=e.message||'Ошибка подключения';
+    errEl.style.display='block';
+  }
+  btn.disabled=false;btn.textContent='Войти';
+}
+
+function doLogout(){
+  SECRET='';JWT='';tableCache={};
+  document.getElementById('login-wrap').style.display='flex';
+  document.getElementById('panel').style.display='none';
+  document.getElementById('admin-secret').value='';
+}
+
+// ===== INIT =====
+function init(){
+  checkStatus();
+  loadDashboard();
+  buildQuickBtns();
+}
+
+async function checkStatus(){
+  try{
+    var r=await fetch(API+'/health');
+    var ok=r.ok&&(await r.json()).ok;
+    document.getElementById('status-dot').className='status-dot'+(ok?'':' red');
+    document.getElementById('status-txt').textContent=ok?'API Online':'API Offline';
+  }catch(e){
+    document.getElementById('status-dot').className='status-dot red';
+    document.getElementById('status-txt').textContent='Недоступен';
+  }
+}
+
+// ===== ADMIN API =====
+async function adminGet(path){
+  var sep=path.includes('?')?'&':'?';
+  var r=await fetch(API+'/admin/'+path+sep+'secret='+encodeURIComponent(SECRET));
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+}
+
+async function jwtGet(path){
+  if(!JWT)return null;
+  var r=await fetch(API+path,{headers:{'Authorization':'Bearer '+JWT}});
+  if(!r.ok)return null;
+  return r.json();
+}
+
+// ===== DASHBOARD =====
+async function loadDashboard(){
+  document.getElementById('stats-grid').innerHTML='<div class="loading">⏳ Загрузка из PostgreSQL...</div>';
+  try{
+    var stats=await adminGet('stats');
+    document.getElementById('b-shops').textContent=stats.shops;
+    document.getElementById('b-products').textContent=stats.products;
+    document.getElementById('b-categories').textContent=stats.categories;
+    document.getElementById('b-orders').textContent=stats.orders;
+    document.getElementById('b-users').textContent=stats.users;
+    document.getElementById('b-cart').textContent=stats.cart;
+
+    var cards=[
+      {val:stats.shops,lbl:'Заведений',sub:'магазины + рестораны',nav:'shops'},
+      {val:stats.products,lbl:'Товаров',sub:stats.products_active+' активных',nav:'products'},
+      {val:stats.orders,lbl:'Заказов всего',sub:'',nav:'orders'},
+      {val:stats.orders_new,lbl:'Новых заказов',sub:'требуют обработки',nav:'orders',color:'var(--yellow)'},
+      {val:stats.users,lbl:'Пользователей',sub:'',nav:'users'},
+      {val:stats.cart,lbl:'Позиций в корзинах',sub:'',nav:'cart'},
+      {val:stats.categories,lbl:'Категорий',sub:'',nav:'categories'},
+    ];
+    document.getElementById('stats-grid').innerHTML=cards.map(function(c){
+      return '<div class="stat-card" onclick="nav(\''+c.nav+'\',null)">'
+        +'<div class="stat-val" style="'+(c.color?'color:'+c.color:'')+'">'+c.val+'</div>'
+        +'<div class="stat-lbl">'+c.lbl+'</div>'
+        +(c.sub?'<div class="stat-sub">'+c.sub+'</div>':'')
+        +'</div>';
+    }).join('');
+  }catch(e){
+    document.getElementById('stats-grid').innerHTML='<div style="color:var(--red);padding:20px">Ошибка: '+e.message+'</div>';
+  }
+}
+
+// ===== TABLE RENDER =====
+function renderTable(elId,cols,data,colLabels){
+  var el=document.getElementById(elId);
+  if(!data||!data.length){el.innerHTML='<div class="loading">Нет данных</div>';return;}
+  var labels=colLabels||cols;
+  var html='<div class="tbl-wrap"><table><thead><tr>';
+  labels.forEach(function(l){html+='<th>'+l+'</th>';});
+  html+='</tr></thead><tbody>';
+  data.forEach(function(row){
+    html+='<tr>';
+    cols.forEach(function(c){
+      var v=row[c];
+      var cell='';
+      if(v===null||v===undefined){cell='<td class="v-null">null</td>';}
+      else if(c==='status'){
+        var cls=v==='new'?'v-status-new':v==='delivered'||v==='completed'?'v-status-done':'v-status-active';
+        cell='<td><span class="'+cls+'">'+v+'</span></td>';
+      }
+      else if(c==='is_active'||c==='revoked'){
+        cell='<td class="'+(v?'v-true':'v-false')+'">'+(v?'✓':'✗')+'</td>';
+      }
+      else if(typeof v==='number'){cell='<td class="v-num">'+v+'</td>';}
+      else if(typeof v==='string'&&v.length>10&&(c.includes('at')||c.includes('date'))){
+        cell='<td class="v-date">'+v.substring(0,16)+'</td>';
+      }
+      else{
+        var s=String(v);
+        cell='<td title="'+s.replace(/"/g,'&quot;')+'">'+s.substring(0,40)+(s.length>40?'…':'')+'</td>';
+      }
+      html+=cell;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  el.innerHTML=html;
+}
+
+function filterRows(name,q){
+  var data=tableCache[name]||[];
+  if(!q){renderTableByName(name,data);return;}
+  var ql=q.toLowerCase();
+  var filtered=data.filter(function(r){return Object.values(r).some(function(v){return String(v).toLowerCase().includes(ql);});});
+  renderTableByName(name,filtered);
+}
+
+function renderTableByName(name,data){
+  var configs={
+    shops:{el:'tbl-shops',cols:['id','name','business_type','address','phone','is_active'],labels:['ID','Название','Тип','Адрес','Телефон','Активен']},
+    products:{el:'tbl-products',cols:['id','name','price','shop_name','category_id','is_active'],labels:['ID','Название','Цена','Магазин','Категория','Активен']},
+    categories:{el:'tbl-categories',cols:['id','name','shop_name','is_active'],labels:['ID','Название','Магазин','Активна']},
+    orders:{el:'tbl-orders',cols:['id','shop_name','status','total_amount','client_user_id','created_at'],labels:['ID','Магазин','Статус','Сумма','Клиент','Дата']},
+    users:{el:'tbl-users',cols:['user_id','role','full_name','phone','created_at'],labels:['TG ID','Роль','Имя','Телефон','Дата']},
+    cart:{el:'tbl-cart',cols:['user_id','name','price','quantity','shop_name'],labels:['Пользователь','Товар','Цена','Кол-во','Магазин']},
+  };
+  var c=configs[name];
+  if(c)renderTable(c.el,c.cols,data,c.labels);
+}
+
+// ===== LOADERS =====
+async function loadShops(){
+  document.getElementById('tbl-shops').innerHTML='<div class="loading">⏳</div>';
+  try{var d=await adminGet('shops');tableCache.shops=d.items;renderTableByName('shops',d.items);}
+  catch(e){document.getElementById('tbl-shops').innerHTML='<div style="color:var(--red);padding:12px">'+e.message+'</div>';}
+}
+
+async function loadProducts(offset){
+  offset=offset||0;tablePages.products=offset;
+  document.getElementById('tbl-products').innerHTML='<div class="loading">⏳</div>';
+  try{
+    var d=await adminGet('products?limit='+PAGE_SIZE+'&offset='+offset);
+    if(offset===0)tableCache.products=d.items;
+    renderTableByName('products',d.items);
+    renderPagination('pg-products',offset,d.total,PAGE_SIZE,'loadProducts');
+  }catch(e){document.getElementById('tbl-products').innerHTML='<div style="color:var(--red);padding:12px">'+e.message+'</div>';}
+}
+
+async function loadCategories(){
+  document.getElementById('tbl-categories').innerHTML='<div class="loading">⏳</div>';
+  try{var d=await adminGet('categories');tableCache.categories=d.items;renderTableByName('categories',d.items);}
+  catch(e){document.getElementById('tbl-categories').innerHTML='<div style="color:var(--red);padding:12px">'+e.message+'</div>';}
+}
+
+async function loadOrders(offset){
+  offset=offset||0;tablePages.orders=offset;
+  document.getElementById('tbl-orders').innerHTML='<div class="loading">⏳</div>';
+  try{
+    var d=await adminGet('orders?limit='+PAGE_SIZE+'&offset='+offset);
+    if(offset===0)tableCache.orders=d.items;
+    renderTableByName('orders',d.items);
+    renderPagination('pg-orders',offset,d.total,PAGE_SIZE,'loadOrders');
+  }catch(e){document.getElementById('tbl-orders').innerHTML='<div style="color:var(--red);padding:12px">'+e.message+'</div>';}
+}
+
+async function loadUsers(offset){
+  offset=offset||0;tablePages.users=offset;
+  document.getElementById('tbl-users').innerHTML='<div class="loading">⏳</div>';
+  try{
+    var d=await adminGet('users?limit='+PAGE_SIZE+'&offset='+offset);
+    if(offset===0)tableCache.users=d.items;
+    renderTableByName('users',d.items);
+    renderPagination('pg-users',offset,d.total,PAGE_SIZE,'loadUsers');
+  }catch(e){document.getElementById('tbl-users').innerHTML='<div style="color:var(--red);padding:12px">'+e.message+'</div>';}
+}
+
+async function loadCart(){
+  document.getElementById('tbl-cart').innerHTML='<div class="loading">⏳</div>';
+  try{var d=await adminGet('cart');tableCache.cart=d.items;renderTableByName('cart',d.items);}
+  catch(e){document.getElementById('tbl-cart').innerHTML='<div style="color:var(--red);padding:12px">'+e.message+'</div>';}
+}
+
+// ===== PAGINATION =====
+function renderPagination(elId,offset,total,pageSize,fnName){
+  var el=document.getElementById(elId);
+  if(!el||total<=pageSize){if(el)el.innerHTML='';return;}
+  var page=Math.floor(offset/pageSize)+1;
+  var totalPages=Math.ceil(total/pageSize);
+  el.innerHTML='<button class="pg-btn" onclick="'+fnName+'('+(offset-pageSize)+')" '+(offset===0?'disabled':'')+'>← Пред</button>'
+    +'<span class="pg-info">'+page+' / '+totalPages+' ('+total+' записей)</span>'
+    +'<button class="pg-btn" onclick="'+fnName+'('+(offset+pageSize)+')" '+(offset+pageSize>=total?'disabled':'')+'>След →</button>';
+}
+
+// ===== NAV =====
+var loaders={shops:loadShops,products:loadProducts,categories:loadCategories,orders:loadOrders,users:loadUsers,cart:loadCart};
+function nav(name,el){
+  document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
+  document.querySelectorAll('.sb-item').forEach(function(s){s.classList.remove('active');});
+  var sec=document.getElementById('sec-'+name);
+  if(sec)sec.classList.add('active');
+  if(el)el.classList.add('active');
+  if(loaders[name]&&!tableCache[name])loaders[name]();
+}
+
+// ===== API TESTER =====
+var QUICK=[
+  {m:'GET',url:'/health',l:'/health'},
+  {m:'GET',url:'/profile',l:'/profile'},
+  {m:'GET',url:'/orders?limit=5',l:'/orders'},
+  {m:'GET',url:'/cart',l:'/cart'},
+  {m:'GET',url:'/catalog/merchants?type=shop&limit=5',l:'merchants'},
+  {m:'GET',url:'/search?q=молоко&type=shop&limit=3',l:'/search'},
+  {m:'GET',url:'/admin/stats?secret='+encodeURIComponent('__SECRET__'),l:'admin/stats'},
+];
+function buildQuickBtns(){
+  document.getElementById('quick-btns').innerHTML=QUICK.map(function(q){
+    var url=q.url.replace('__SECRET__',SECRET);
+    return '<div class="q-btn" onclick="setReq(\''+q.m+'\',\''+url.replace(/'/g,"\\'")+'\')">'
+      +q.m+' '+q.l+'</div>';
+  }).join('');
+}
+function setReq(m,url){
+  document.getElementById('req-method').value=m;
+  document.getElementById('req-url').value=url;
+}
+async function sendReq(){
+  var method=document.getElementById('req-method').value;
+  var url=document.getElementById('req-url').value.trim();
+  var bodyStr=document.getElementById('req-body').value.trim();
+  var body=null;
+  if(bodyStr){try{body=JSON.parse(bodyStr);}catch(e){alert('Невалидный JSON');return;}}
+  if(!url.startsWith('/'))url='/'+url;
+  var headers={'Content-Type':'application/json'};
+  if(JWT)headers['Authorization']='Bearer '+JWT;
+  var t0=Date.now();
+  try{
+    var r=await fetch(API+url,{method:method,headers:headers,body:body?JSON.stringify(body):undefined});
+    var ms=Date.now()-t0;
+    var data=await r.json();
+    document.getElementById('api-resp').innerHTML=
+      '<div class="resp-meta"><span class="'+(r.ok?'resp-ok':'resp-err')+'">'+r.status+'</span><span>'+ms+'ms</span><span style="color:var(--text2)">'+method+' '+url+'</span></div>'
+      +'<div class="resp-box '+(r.ok?'ok':'err')+'">'+JSON.stringify(data,null,2)+'</div>';
+  }catch(e){
+    document.getElementById('api-resp').innerHTML='<div class="resp-box err">'+e.message+'</div>';
+  }
+}
+</script>
+</body>
+</html>
