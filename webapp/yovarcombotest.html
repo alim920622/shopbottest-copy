@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ёвар Combo v2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Unbounded:wght@400;600;900&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;
+  --bg2:#111118;
+  --bg3:#181820;
+  --border:#1e1e2e;
+  --border2:#2a2a3e;
+  --text:#e0e0f0;
+  --text2:#6b6b8a;
+  --text3:#9090b0;
+  --accent:#7c6af5;
+  --accent2:#5dcaa5;
+  --accent3:#f5a623;
+  --accent4:#f06292;
+  --red:#f87171;
+  --mono:'JetBrains Mono',monospace;
+  --display:'Unbounded',sans-serif;
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:13px;
+  height:100vh;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ── TOP BAR ── */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 18px;
+  border-bottom:1px solid var(--border);
+  background:var(--bg2);
+  flex-shrink:0;
+}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.logo{
+  font-family:var(--display);
+  font-size:13px;
+  font-weight:900;
+  letter-spacing:-0.5px;
+  color:#fff;
+}
+.logo span{color:var(--accent)}
+.ver-badge{
+  font-size:9px;
+  padding:2px 7px;
+  border-radius:10px;
+  background:#1a1a2e;
+  border:1px solid var(--accent);
+  color:var(--accent);
+  letter-spacing:.5px;
+}
+.topbar-center{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+.intent-chip{
+  font-size:9px;
+  padding:2px 8px;
+  border-radius:8px;
+  border:1px solid var(--border2);
+  color:var(--text2);
+  cursor:default;
+  transition:all .2s;
+  font-family:var(--mono);
+}
+.intent-chip.active{
+  border-color:var(--accent);
+  color:var(--accent);
+  background:#1a1a2e;
+}
+.intent-chip.i1{--c:#7c6af5}.intent-chip.i2{--c:#5dcaa5}.intent-chip.i3{--c:#f5a623}
+.intent-chip.i4{--c:#f06292}.intent-chip.i5{--c:#60a5fa}.intent-chip.i6{--c:#a78bfa}
+.intent-chip.i7{--c:#34d399}.intent-chip.i8{--c:#fb923c}.intent-chip.i9{--c:#e879f9}
+.intent-chip.i10{--c:#f59e0b}.intent-chip.i11{--c:#38bdf8}.intent-chip.i12{--c:#f43f5e}
+.intent-chip.i13{--c:#86efac}.intent-chip.i14{--c:#94a3b8}
+.intent-chip.active{border-color:var(--c)!important;color:var(--c)!important;background:color-mix(in srgb,var(--c) 10%,transparent)!important}
+.topbar-right{display:flex;gap:8px;align-items:center}
+.stats-mini{font-size:10px;color:var(--text2);display:flex;gap:10px}
+.sm{color:var(--text);font-weight:700}
+
+/* ── MAIN LAYOUT ── */
+.main{
+  display:grid;
+  grid-template-columns:1fr 280px 380px;
+  flex:1;
+  overflow:hidden;
+}
+
+/* ── CHAT PANEL ── */
+.chat-panel{
+  display:flex;
+  flex-direction:column;
+  border-right:1px solid var(--border);
+  overflow:hidden;
+}
+.chat-messages{
+  flex:1;
+  overflow-y:auto;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.chat-messages::-webkit-scrollbar{width:3px}
+.chat-messages::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+.msg-user{
+  align-self:flex-end;
+  max-width:72%;
+  background:linear-gradient(135deg,#1e1a3e,#2a2050);
+  border:1px solid #3a2a6e;
+  border-radius:14px 14px 3px 14px;
+  padding:10px 14px;
+  font-size:13px;
+  color:#d0c8ff;
+  line-height:1.5;
+}
+.msg-bot{
+  align-self:flex-start;
+  max-width:82%;
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:3px 14px 14px 14px;
+  padding:10px 14px;
+  font-size:13px;
+  color:var(--text);
+  line-height:1.6;
+}
+.msg-bot.typing{
+  color:var(--text2);
+  font-style:italic;
+}
+.msg-intent{
+  font-size:9px;
+  padding:2px 8px;
+  border-radius:6px;
+  margin-bottom:6px;
+  display:inline-block;
+  font-weight:700;
+  letter-spacing:.5px;
+}
+.msg-cards{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:8px;
+}
+.msg-card{
+  background:#111118;
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:8px 11px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  transition:border-color .15s;
+}
+.msg-card:hover{border-color:#3a3a5e}
+.mc-name{font-size:12px;font-weight:500;color:#e0e0f0;margin-bottom:2px}
+.mc-shop{font-size:10px;color:var(--text2)}
+.mc-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.mc-price{font-size:12px;font-weight:700;color:var(--accent2)}
+.mc-btn{
+  font-size:9px;
+  padding:3px 8px;
+  background:var(--accent2);
+  color:#000;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
+  font-weight:700;
+  font-family:var(--mono);
+}
+.msg-not-found{
+  font-size:11px;
+  color:var(--text2);
+  margin-top:6px;
+  padding:6px 10px;
+  background:#1a1a1a;
+  border-radius:6px;
+  border-left:2px solid var(--accent3);
+}
+.load-more-btn{
+  font-size:10px;
+  padding:5px 14px;
+  background:transparent;
+  border:1px solid var(--border2);
+  color:var(--text2);
+  border-radius:6px;
+  cursor:pointer;
+  font-family:var(--mono);
+  margin-top:4px;
+  transition:all .15s;
+}
+.load-more-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+.chat-input-area{
+  border-top:1px solid var(--border);
+  padding:12px 14px;
+  background:var(--bg2);
+}
+.presets-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-bottom:8px;
+}
+.preset-btn{
+  font-size:10px;
+  padding:3px 9px;
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:6px;
+  color:var(--text2);
+  cursor:pointer;
+  font-family:var(--mono);
+  transition:all .15s;
+}
+.preset-btn:hover{border-color:var(--accent);color:var(--accent)}
+.input-row{display:flex;gap:8px}
+.chat-inp{
+  flex:1;
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:10px 13px;
+  font-size:13px;
+  color:var(--text);
+  font-family:var(--mono);
+  outline:none;
+  transition:border-color .2s;
+}
+.chat-inp:focus{border-color:var(--accent)}
+.chat-inp::placeholder{color:var(--text2)}
+.send-btn{
+  padding:10px 16px;
+  background:var(--accent);
+  border:none;
+  border-radius:8px;
+  color:#fff;
+  font-family:var(--mono);
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+  transition:opacity .15s;
+}
+.send-btn:hover{opacity:.85}
+.send-btn:disabled{opacity:.4;cursor:default}
+
+/* ── DEBUG PANEL ── */
+.debug-panel{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  background:var(--bg2);
+}
+.debug-tabs{
+  display:flex;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.dtab{
+  flex:1;
+  padding:9px;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.5px;
+  text-align:center;
+  cursor:pointer;
+  color:var(--text2);
+  border-bottom:2px solid transparent;
+  transition:all .15s;
+}
+.dtab.active{color:var(--accent);border-color:var(--accent)}
+.debug-content{
+  flex:1;
+  overflow-y:auto;
+  padding:12px;
+}
+.debug-content::-webkit-scrollbar{width:3px}
+.debug-content::-webkit-scrollbar-thumb{background:var(--border2)}
+
+/* Pipeline view */
+.pipeline{display:flex;flex-direction:column;gap:8px}
+.pipe-step{
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:8px;
+  overflow:hidden;
+}
+.pipe-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:7px 11px;
+  border-bottom:1px solid var(--border);
+}
+.pipe-num{
+  font-size:9px;
+  font-weight:700;
+  width:18px;height:18px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.pipe-title{font-size:11px;font-weight:700;flex:1;margin-left:7px}
+.pipe-badge{
+  font-size:9px;
+  padding:1px 7px;
+  border-radius:8px;
+}
+.pb-wait{background:#1a1a1a;color:#444;border:1px solid #222}
+.pb-run{background:#1a1a2e;color:#60a5fa;border:1px solid #1a2a4e}
+.pb-ok{background:#0a2010;color:var(--accent2);border:1px solid #1a4020}
+.pb-err{background:#200a0a;color:var(--red);border:1px solid #401a1a}
+.pb-skip{background:#1a1a1a;color:#444;border:1px solid #222}
+.pipe-body{padding:10px 11px}
+pre.pipe-pre{
+  font-size:10px;
+  white-space:pre-wrap;
+  word-break:break-all;
+  line-height:1.5;
+  color:#9090b0;
+  max-height:140px;
+  overflow:auto;
+}
+pre.pipe-pre::-webkit-scrollbar{width:2px}
+pre.pipe-pre::-webkit-scrollbar-thumb{background:var(--border2)}
+
+/* Intent details */
+.intent-detail{
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:12px;
+  margin-bottom:10px;
+}
+.id-label{font-size:9px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.id-value{font-size:13px;font-weight:700;margin-bottom:8px}
+.id-row{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);padding:3px 0;border-bottom:1px solid var(--border)}
+.id-row:last-child{border-bottom:none}
+.id-val{color:var(--text);font-weight:500}
+
+/* History panel */
+.hist-list-d{display:flex;flex-direction:column;gap:6px}
+.hist-entry{
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:7px;
+  padding:8px 10px;
+  cursor:pointer;
+  transition:border-color .15s;
+}
+.hist-entry:hover{border-color:var(--border2)}
+.hist-entry.active{border-color:var(--accent);background:#0d0d1a}
+.he-query{font-size:11px;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.he-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.he-badge{font-size:9px;padding:1px 6px;border-radius:5px}
+.he-time{font-size:9px;color:#444;margin-left:auto}
+
+/* Prompt view */
+.prompt-selector{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:10px;
+}
+.ps-item{
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:7px;
+  padding:8px 11px;
+  cursor:pointer;
+  transition:all .15s;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.ps-item:hover{border-color:var(--border2)}
+.ps-item.active{border-color:var(--accent);background:#0d0d1a}
+.ps-num{font-size:9px;color:var(--text2);width:16px;flex-shrink:0}
+.ps-name{font-size:11px;font-weight:700;flex:1}
+.ps-desc{font-size:10px;color:var(--text2);margin-top:1px}
+.ps-tag{font-size:8px;padding:1px 5px;border-radius:4px;flex-shrink:0}
+
+/* scrollbar global */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* Empty state */
+.empty-chat{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  flex:1;
+  gap:12px;
+  color:var(--text2);
+}
+.empty-logo{
+  font-family:var(--display);
+  font-size:28px;
+  font-weight:900;
+  color:var(--text3);
+  letter-spacing:-1px;
+}
+.empty-logo span{color:var(--accent)}
+.empty-sub{font-size:11px;text-align:center;max-width:260px;line-height:1.6}
+
+/* Dialog thread indicator */
+.thread-indicator{
+  font-size:9px;
+  color:var(--accent);
+  padding:4px 10px;
+  background:#0d0d1a;
+  border:1px solid #1a1a3e;
+  border-radius:6px;
+  align-self:center;
+  margin:4px 0;
+}
+
+/* ── USER VIEW BANNER ── */
+.user-view-banner{
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  overflow:hidden;
+  margin-bottom:10px;
+}
+.uvb-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:7px 11px;
+  background:#0d0d1a;
+  border-bottom:1px solid var(--border);
+}
+.uvb-title{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--accent)}
+.uvb-badge{font-size:9px;padding:1px 6px;border-radius:4px}
+.uvb-body{padding:10px 11px}
+.uvb-query{font-size:11px;color:var(--text2);margin-bottom:6px}
+.uvb-query span{color:var(--text);font-weight:500}
+.uvb-response{
+  font-size:12px;
+  color:var(--text);
+  background:#111118;
+  border-radius:6px;
+  padding:8px 10px;
+  border-left:3px solid var(--accent);
+  line-height:1.5;
+  margin-bottom:6px;
+}
+.uvb-cards{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.uvb-card{
+  background:#0a0a12;
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:6px 9px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.uvb-card-name{font-size:11px;color:var(--text)}
+.uvb-card-shop{font-size:9px;color:var(--text2)}
+.uvb-card-price{font-size:11px;font-weight:700;color:var(--accent2);flex-shrink:0}
+.uvb-not-found{
+  font-size:10px;
+  color:var(--accent3);
+  margin-top:5px;
+  padding:4px 8px;
+  background:#1a1500;
+  border-radius:4px;
+  border-left:2px solid var(--accent3);
+}
+.uvb-empty{font-size:11px;color:var(--text2);padding:8px 0;text-align:center}
+
+/* ── PROMPT MODAL ── */
+.prompt-modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.75);
+  display:flex;align-items:center;justify-content:center;
+  z-index:999;
+}
+.prompt-modal{
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-radius:12px;
+  width:560px;
+  max-width:95vw;
+  max-height:80vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.pm-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.pm-title{font-size:13px;font-weight:700;color:var(--text)}
+.pm-close{
+  width:26px;height:26px;border-radius:50%;
+  background:var(--bg3);border:1px solid var(--border);
+  color:var(--text2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;
+}
+.pm-body{padding:14px 16px;overflow-y:auto;flex:1}
+.pm-body pre{
+  font-size:11px;
+  white-space:pre-wrap;
+  word-break:break-all;
+  line-height:1.6;
+  color:#a0a0c0;
+  background:#0a0a12;
+  border-radius:6px;
+  padding:12px;
+  border:1px solid var(--border);
+}
+.pm-tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.pm-tag{font-size:9px;padding:2px 7px;border-radius:5px;border:1px solid}
+
+/* ── HISTORY DOWNLOAD BTN ── */
+.hist-dl-btn{
+  font-size:10px;
+  padding:4px 10px;
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:5px;
+  color:var(--text2);
+  cursor:pointer;
+  font-family:var(--mono);
+  transition:all .15s;
+}
+.hist-dl-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">Ёвар<span>.</span>combo</div>
+    <div class="ver-badge">v2</div>
+  </div>
+  <div class="topbar-center" id="intent-chips">
+    <!-- filled by JS -->
+  </div>
+  <div class="topbar-right">
+    <div class="stats-mini">
+      <span>всего <span class="sm" id="s-total">0</span></span>
+      <span>найдено <span class="sm" id="s-found">0</span></span>
+      <span>диалог <span class="sm" id="s-dialog">0</span></span>
+    </div>
+    <button onclick="clearAll()" style="font-size:10px;padding:4px 9px;background:#1a1a1a;border:1px solid #333;color:#666;border-radius:5px;cursor:pointer;font-family:var(--mono)">✕ очистить</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- CHAT -->
+  <div class="chat-panel">
+    <div class="chat-messages" id="chat-messages">
+      <div class="empty-chat" id="empty-state">
+        <div class="empty-logo">Ёвар<span>.</span></div>
+        <div class="empty-sub">14 специализированных промптов.<br>Напишите запрос — система определит намерение и выберет нужный промпт.</div>
+      </div>
+    </div>
+    <div class="chat-input-area">
+      <div class="presets-row" id="presets-row">
+        <!-- filled by JS -->
+      </div>
+      <div class="input-row">
+        <input class="chat-inp" id="chat-inp" placeholder="Напишите запрос..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"/>
+        <button class="send-btn" id="send-btn" onclick="sendMsg()">▶ Отправить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- USER VIEW -->
+  <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;background:var(--bg2);">
+    <div style="padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg3);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:9px;font-weight:700;letter-spacing:.5px;color:var(--text2);text-transform:uppercase">👁 Вид пользователя</span>
+      <span style="font-size:9px;color:#333">последний ответ</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:12px;" id="user-view-panel">
+      <div class="uvb-empty">Запустите тест — здесь появится то, что видит пользователь</div>
+    </div>
+  </div>
+
+  <!-- DEBUG -->
+  <div class="debug-panel">
+    <div class="debug-tabs">
+      <div class="dtab active" id="tab-pipeline" onclick="switchTab('pipeline')">PIPELINE</div>
+      <div class="dtab" id="tab-intent" onclick="switchTab('intent')">НАМЕРЕНИЕ</div>
+      <div class="dtab" id="tab-prompts" onclick="switchTab('prompts')">ПРОМПТЫ</div>
+      <div class="dtab" id="tab-history" onclick="switchTab('history')">ИСТОРИЯ</div>
+    </div>
+    <div class="debug-content" id="debug-content">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+</div>
+
+<script>
+var API = 'https://sabad.duckdns.org/api';
+var GEMINI_KEY = 'AIzaSyBy5M68EZtj0nNtSBo-uEm1eJjGVdbnHpc';
+var MISTRAL_KEY = 'bm2pzWBvHUy8JM8WOlHmBPqXSmk8TuQ8';
+
+// ── INTENT DEFINITIONS ──
+var INTENTS = [
+  {id:'search',    n:1,  name:'Search',       desc:'Поиск товара/блюда в одном типе заведения', color:'#7c6af5', block:'ПОИСК'},
+  {id:'hybrid',    n:2,  name:'Hybrid',        desc:'Смешанный: магазин + ресторан одновременно', color:'#5dcaa5', block:'ПОИСК'},
+  {id:'budget',    n:3,  name:'Budget',        desc:'Подбор по бюджету ("на 50 сомони")', color:'#f5a623', block:'ПОИСК'},
+  {id:'health',    n:4,  name:'Health/Diet',   desc:'Еда для диабета, диеты, аллергии', color:'#f06292', block:'ПОИСК'},
+  {id:'logistics', n:5,  name:'Logistics',     desc:'Ближайшее заведение — карточка с часами', color:'#60a5fa', block:'ЗАВЕДЕНИЯ'},
+  {id:'dish_across',n:6, name:'Dish Across',   desc:'Одно блюдо во всех заведениях блоками', color:'#a78bfa', block:'ЗАВЕДЕНИЯ'},
+  {id:'promo',     n:7,  name:'Promo',         desc:'Акции, скидки, промокоды', color:'#34d399', block:'ЗАВЕДЕНИЯ'},
+  {id:'navigation',n:8,  name:'Navigation',    desc:'Корзина, статус заказа, где курьер', color:'#fb923c', block:'ЗАКАЗЫ'},
+  {id:'repeat',    n:9,  name:'Repeat',        desc:'"Повтори последний заказ"', color:'#e879f9', block:'ЗАКАЗЫ'},
+  {id:'dialog',    n:10, name:'Dialog Agent',  desc:'Интерактивная переписка до результата', color:'#f59e0b', block:'ДИАЛОГ'},
+  {id:'mood',      n:11, name:'Mood/Context',  desc:'"Хочу что-то горячее и сытное"', color:'#38bdf8', block:'ДИАЛОГ'},
+  {id:'complaint', n:12, name:'Complaint',     desc:'Жалоба на заказ, качество, опоздание', color:'#f43f5e', block:'СЕРВИС'},
+  {id:'greeting',  n:13, name:'Greeting',      desc:'Приветствие, small talk', color:'#86efac', block:'СЕРВИС'},
+  {id:'fallback',  n:14, name:'Fallback',      desc:'Непонятный запрос — уточняет', color:'#94a3b8', block:'СЕРВИС'},
+];
+
+// ── REGEX CLASSIFIER (fast, no AI) ──
+var REGEX_MAP = [
+  {id:'greeting',    re:/^(привет|салом|salom|здравствуй|хай|hi|hello|добрый|доброе)/i},
+  {id:'navigation',  re:/(корзин|мои заказ|статус заказ|где.*заказ|когда.*доставят|мой заказ|активны.*заказ|добавь.*корзин|покажи.*заказ)/i},
+  {id:'repeat',      re:/(повтори|повтор|снова.*заказ|заказ.*снова|тот же|такой же заказ)/i},
+  {id:'complaint',   re:/(жалоб|проблем|не доставил|опоздал|холодн|плохо|ужасно|верните|возврат|отмен)/i},
+  {id:'logistics',   re:/(ближайш|рядом|близко|наздик|которы.*откры|время работ|часы работ|когда открыт|работает сейчас)/i},
+  {id:'promo',       re:/(акци|скидк|промокод|купон|бесплатн.*доставк|спецпредложени)/i},
+  {id:'budget',      re:/(\d+\s*сомон|\d+\s*руб|до\s*\d+|за\s*\d+|бюджет|подешевле|дешев|эконом)/i},
+  {id:'health',      re:/(диабет|диет|аллерги|вегетарин|веган|без глютен|халяль|без лактоз|полезн.*еда|здоров.*еда|низко.*калор)/i},
+  {id:'mood',        re:/(посоветуй|порекомендуй|что.*поесть|что.*покушать|хочу.*съесть|на ужин|на обед|на завтрак|что.*вкусного|хочу что-то)/i},
+  {id:'dialog',      re:/(помог.*выбр|не знаю что|помогите|посоветуйте мне|что лучше|как выбрать|расскажи|объясни)/i},
+  {id:'dish_across', re:/(покажи.*все|во всех|вариант.*плов|вариант.*шашлык|где.*есть|в каких.*есть|сравни.*заведен)/i},
+];
+
+function classifyByRegex(q) {
+  for (var i = 0; i < REGEX_MAP.length; i++) {
+    if (REGEX_MAP[i].re.test(q)) return REGEX_MAP[i].id;
+  }
+  return null;
+}
+
+// ── PROMPTS (per intent) ──
+var PROMPTS = {
+  search: function(q) {
+    return 'Ты помощник доставки Сабад (Душанбе). Пользователь ищет товар или блюдо.\n'
+      +'Запрос: "'+q+'"\n'
+      +'Извлеки список товаров/блюд для поиска. Определи тип: shop (продукты/товары) или restaurant (готовая еда).\n'
+      +'Ответь ТОЛЬКО JSON без пояснений:\n'
+      +'{"type":"shop|restaurant","items":["товар1","товар2"],"message":"короткий ответ пользователю на русском"}';
+  },
+  hybrid: function(q) {
+    return 'Ты помощник доставки Сабад (Душанбе). Смешанный запрос (магазин + ресторан).\n'
+      +'Запрос: "'+q+'"\n'
+      +'Раздели на shop-товары и restaurant-блюда.\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"shop_items":["товар1"],"restaurant_items":["блюдо1"],"message":"ответ пользователю"}';
+  },
+  budget: function(q) {
+    return 'Ты помощник доставки Сабад (Душанбе). Запрос с бюджетом.\n'
+      +'Запрос: "'+q+'"\n'
+      +'Извлеки: максимальную сумму в сомони, тип заведения, что ищет.\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"max_price":50,"type":"shop|restaurant|any","items":["товар"],"message":"ответ"}';
+  },
+  health: function(q) {
+    return 'Ты диетолог-помощник доставки Сабад (Душанбе).\n'
+      +'Запрос: "'+q+'"\n'
+      +'Определи тип ограничений и предложи подходящие товары/блюда.\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"condition":"диабет|диета|аллергия|вегетарианство|халяль|другое","recommended_items":["товар1","товар2"],"avoid":["что избегать"],"message":"советы пользователю"}';
+  },
+  logistics: function(q) {
+    return 'Ты помощник доставки Сабад (Душанбе). Пользователь ищет заведение.\n'
+      +'Запрос: "'+q+'"\n'
+      +'Определи: тип заведения, район если указан, приоритет (скорость/рейтинг/цена).\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"venue_type":"shop|restaurant|any","district":null,"priority":"speed|rating|price","message":"ответ пользователю"}';
+  },
+  dish_across: function(q) {
+    return 'Ты помощник доставки Сабад (Душанбе). Пользователь хочет найти одно блюдо/товар во всех заведениях.\n'
+      +'Запрос: "'+q+'"\n'
+      +'Извлеки название блюда/товара для поиска по всем заведениям.\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"dish":"название блюда","type":"shop|restaurant|any","message":"ответ пользователю"}';
+  },
+  promo: function(q) {
+    return 'Ты помощник доставки Сабад (Душанбе). Запрос про акции/скидки.\n'
+      +'Запрос: "'+q+'"\n'
+      +'Ответи пользователю что проверяешь актуальные акции.\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"promo_type":"скидка|промокод|бесплатная доставка|другое","venue_type":"shop|restaurant|any","message":"ответ пользователю"}';
+  },
+  navigation: function(q) {
+    return 'Ты навигационный помощник приложения Сабад (Душанбе).\n'
+      +'Запрос: "'+q+'"\n'
+      +'Определи действие пользователя.\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"action":"cart_show|cart_add|order_status|order_history|order_cancel|delivery_time|другое","target":null,"message":"ответ пользователю"}';
+  },
+  repeat: function(q) {
+    return 'Ты помощник доставки Сабад (Душанбе). Пользователь хочет повторить заказ.\n'
+      +'Запрос: "'+q+'"\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"action":"repeat_last|repeat_specific","order_hint":null,"message":"подтверждение пользователю"}';
+  },
+  dialog: function(q, history) {
+    var ctx = history && history.length
+      ? 'История диалога:\n' + history.map(function(m){return (m.role==='user'?'Клиент: ':'Ёвар: ')+m.text;}).join('\n') + '\n\n'
+      : '';
+    return 'Ты Ёвар — умный помощник доставки Сабад (Душанбе). Веди диалог с клиентом.\n'
+      + ctx
+      +'Новый запрос клиента: "'+q+'"\n'
+      +'Задавай уточняющие вопросы (тип заведения, бюджет, предпочтения) пока не поймёшь точно что нужно.\n'
+      +'Когда поймёшь — предложи конкретные позиции.\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"stage":"clarifying|ready","question":null,"items":[],"message":"ответ пользователю на русском/тадж/узб"}';
+  },
+  mood: function(q, history) {
+    var ctx = history && history.length
+      ? 'Контекст: '+history.slice(-2).map(function(m){return m.text;}).join(' / ')+'\n'
+      : '';
+    return 'Ты Ёвар — умный помощник доставки Сабад (Душанбе).\n'
+      + ctx
+      +'Запрос: "'+q+'"\n'
+      +'Понимай настроение/контекст. Предложи подходящие блюда или продукты.\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"mood":"сытное|лёгкое|острое|сладкое|горячее|холодное|другое","venue_type":"shop|restaurant|any","items":["вариант1","вариант2","вариант3"],"message":"ответ пользователю"}';
+  },
+  complaint: function(q) {
+    return 'Ты сотрудник службы поддержки Сабад (Душанбе). Клиент недоволен.\n'
+      +'Запрос: "'+q+'"\n'
+      +'Прояви понимание и предложи решение.\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"complaint_type":"опоздание|качество|неверный заказ|другое","needs_compensation":false,"message":"сочувственный ответ с предложением помощи"}';
+  },
+  greeting: function(q) {
+    return 'Ты Ёвар — дружелюбный помощник доставки Сабад (Душанбе).\n'
+      +'Запрос: "'+q+'"\n'
+      +'Поприветствуй и коротко объясни что умеешь.\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"message":"приветствие на языке пользователя (ru/tj/uz) с кратким описанием возможностей"}';
+  },
+  fallback: function(q) {
+    return 'Ты Ёвар — помощник доставки Сабад (Душанбе).\n'
+      +'Запрос: "'+q+'"\n'
+      +'Не понял запрос. Вежливо уточни что имел в виду пользователь.\n'
+      +'Ответь ТОЛЬКО JSON:\n'
+      +'{"message":"вежливый вопрос что именно нужно пользователю"}';
+  }
+};
+
+// ── PRESETS ──
+var PRESETS = [
+  'молоко хлеб яйца', 'плов шашлык', 'картошка + плов',
+  'что на ужин до 60 сомони', 'ближайший магазин',
+  'покажи плов во всех', 'статус моего заказа',
+  'хочу что-то горячее', 'есть ли акции?',
+  'привет', 'не привезли заказ'
+];
+
+// ── STEP LABELS ──
+var STEP_LABELS = ['1. КЛАССИФИКАТОР','2. ПРОМПТ-ВЫЗОВ','3. ПОИСК'];
+
+// ── STATE ──
+var history_ = JSON.parse(localStorage.getItem('yovar_combo_hist_v2') || '[]');
+var dialogThread = [];
+var dialogActive = false;
+var currentTab = 'pipeline';
+var currentPipeline = null;
+var totalFound = 0, totalDialog = 0;
+
+// ── INIT ──
+renderIntentChips();
+renderPresets();
+renderDebug();
+updateStats();
+
+function renderIntentChips() {
+  var el = document.getElementById('intent-chips');
+  el.innerHTML = INTENTS.map(function(it) {
+    return '<div class="intent-chip i'+it.n+'" id="chip-'+it.id+'" title="'+it.desc+'">'+it.name+'</div>';
+  }).join('');
+}
+
+function highlightChip(intentId) {
+  document.querySelectorAll('.intent-chip').forEach(function(c) { c.classList.remove('active'); });
+  var el = document.getElementById('chip-' + intentId);
+  if (el) el.classList.add('active');
+}
+
+function renderPresets() {
+  var el = document.getElementById('presets-row');
+  el.innerHTML = PRESETS.map(function(p, i) {
+    return '<div class="preset-btn" data-preset-idx="'+i+'">'+p+'</div>';
+  }).join('');
+  el.querySelectorAll('[data-preset-idx]').forEach(function(div){
+    var idx = parseInt(div.getAttribute('data-preset-idx'));
+    div.addEventListener('click', function(){ setQ(PRESETS[idx]); });
+  });
+}
+
+function setQ(q) {
+  document.getElementById('chat-inp').value = q;
+  sendMsg();
+}
+
+// ── MAIN SEND ──
+async function sendMsg() {
+  var q = document.getElementById('chat-inp').value.trim();
+  if (!q) return;
+  document.getElementById('chat-inp').value = '';
+  document.getElementById('send-btn').disabled = true;
+
+  // Remove empty state
+  document.getElementById('empty-state').style.display = 'none';
+
+  // Add user bubble
+  addBubble('user', q);
+
+  // Init pipeline
+  var pipeline = {
+    id: Date.now(),
+    ts: new Date().toISOString(),
+    query: q,
+    classifier: {method:null, intent:null, ms:0, raw:null},
+    prompt_call: {intent:null, prompt:null, ms:0, raw:null, parsed:null, error:null},
+    search: {skipped:true, queries:[], found:0, items:[], ms:0, notFound:[]},
+    final: {intent:null, found:0, items:[], response:''},
+  };
+  currentPipeline = pipeline;
+  renderDebug();
+
+  // ── STEP 1: CLASSIFY ──
+  updatePipeStep(1, 'run', '⏳ классификация...');
+  var t0 = Date.now();
+  var regexIntent = classifyByRegex(q);
+  var intent = regexIntent;
+  var classMethod = 'regex';
+
+  if (!intent) {
+    // AI classification via Gemini
+    classMethod = 'ai';
+    try {
+      var classPrompt = 'Определи намерение запроса одним словом из списка:\n'
+        +'search=поиск товара/блюда, hybrid=магазин+ресторан, budget=бюджет/цена,\n'
+        +'health=диета/болезнь/аллергия, logistics=ближайшее заведение/часы,\n'
+        +'dish_across=блюдо во всех заведениях, promo=акции/скидки,\n'
+        +'navigation=корзина/статус заказа/история, repeat=повторить заказ,\n'
+        +'dialog=помогите выбрать/не знаю, mood=по настроению/контексту,\n'
+        +'complaint=жалоба/проблема, greeting=привет/салом, fallback=непонятно\n\n'
+        +'Запрос: "'+q+'"\n'
+        +'Ответь ТОЛЬКО одним словом из списка выше.';
+
+      var cr = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+GEMINI_KEY, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{parts:[{text:classPrompt}]}], generationConfig:{maxOutputTokens:10,temperature:0}})
+      });
+      var cj = await cr.json();
+      var rawIntent = ((cj.candidates||[])[0]||{}).content;
+      rawIntent = rawIntent ? rawIntent.parts[0].text.trim().toLowerCase() : 'fallback';
+      intent = INTENTS.find(function(x){return x.id===rawIntent;}) ? rawIntent : 'fallback';
+      pipeline.classifier.raw = rawIntent;
+    } catch(e) {
+      intent = 'search';
+    }
+  }
+
+  pipeline.classifier = {method:classMethod, intent:intent, ms:Date.now()-t0, raw:pipeline.classifier.raw};
+  highlightChip(intent);
+  updatePipeStep(1, 'ok', '✓ '+intent+' ('+classMethod+', '+(Date.now()-t0)+'ms)');
+  document.getElementById('p1-body').textContent = JSON.stringify(pipeline.classifier, null, 2);
+
+  // Dialog thread management
+  if (intent === 'dialog' || intent === 'mood') {
+    if (!dialogActive) {
+      dialogActive = true;
+      dialogThread = [];
+    }
+  } else {
+    dialogActive = false;
+    dialogThread = [];
+  }
+
+  // ── STEP 2: PROMPT CALL ──
+  updatePipeStep(2, 'run', '⏳ вызов промпта «'+intent+'»...');
+  var t1 = Date.now();
+  var promptFn = PROMPTS[intent];
+  var promptText = promptFn ? promptFn(q, dialogThread) : PROMPTS.fallback(q);
+  pipeline.prompt_call.intent = intent;
+  pipeline.prompt_call.prompt = promptText.substring(0, 200) + (promptText.length > 200 ? '...' : '');
+  document.getElementById('p2-body').textContent = 'Промпт:\n' + promptText.substring(0,300)+'...';
+
+  var aiResult = null;
+  try {
+    var ar = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+GEMINI_KEY, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:promptText}]}], generationConfig:{maxOutputTokens:400,temperature:0.4}})
+    });
+    var aj = await ar.json();
+    var rawText = ((aj.candidates||[])[0]||{}).content;
+    rawText = rawText ? rawText.parts[0].text.trim() : '{}';
+    // Parse JSON
+    var jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    aiResult = jsonMatch ? JSON.parse(jsonMatch[0]) : {message: rawText};
+    pipeline.prompt_call.raw = rawText.substring(0,300);
+    pipeline.prompt_call.parsed = aiResult;
+    pipeline.prompt_call.ms = Date.now() - t1;
+    updatePipeStep(2, 'ok', '✓ ответ ('+pipeline.prompt_call.ms+'ms)');
+    document.getElementById('p2-body').textContent = JSON.stringify(aiResult, null, 2);
+  } catch(e) {
+    pipeline.prompt_call.error = e.message;
+    pipeline.prompt_call.ms = Date.now() - t1;
+    updatePipeStep(2, 'err', '✗ ошибка');
+    document.getElementById('p2-body').textContent = 'Ошибка: ' + e.message;
+  }
+
+  // ── STEP 3: SEARCH (if applicable) ──
+  var searchIntents = ['search','hybrid','budget','health','dish_across','mood'];
+  var shouldSearch = searchIntents.indexOf(intent) > -1 && aiResult;
+  var foundItems = [];
+
+  if (shouldSearch) {
+    updatePipeStep(3, 'run', '⏳ поиск...');
+    var t2 = Date.now();
+    var queries = [];
+    var searchType = null;
+
+    if (intent === 'search' && aiResult.items) {
+      queries = aiResult.items.slice(0,5);
+      searchType = aiResult.type;
+    } else if (intent === 'hybrid') {
+      queries = (aiResult.shop_items||[]).concat(aiResult.restaurant_items||[]);
+    } else if (intent === 'budget' && aiResult.items) {
+      queries = aiResult.items.slice(0,3);
+      searchType = aiResult.type;
+    } else if (intent === 'health' && aiResult.recommended_items) {
+      queries = aiResult.recommended_items.slice(0,4);
+    } else if (intent === 'dish_across' && aiResult.dish) {
+      queries = [aiResult.dish];
+      searchType = aiResult.type;
+    } else if (intent === 'mood' && aiResult.items) {
+      queries = aiResult.items.slice(0,3);
+      searchType = aiResult.venue_type;
+    }
+
+    pipeline.search.skipped = false;
+    pipeline.search.queries = queries;
+
+    if (queries.length) {
+      try {
+        var searchResults = await Promise.all(queries.map(async function(qw) {
+          var types = (searchType && searchType !== 'any') ? [searchType] : ['shop','restaurant'];
+          var allRes = await Promise.all(types.map(function(t){
+            return fetch(API+'/search?q='+encodeURIComponent(qw)+'&type='+t+'&limit=5').then(function(r){return r.json();}).catch(function(){return {items:[]};});
+          }));
+          var items = allRes.reduce(function(a,r){return a.concat(r.items||[]);}, []);
+          return {q:qw, items:items};
+        }));
+
+        var seen = {};
+        searchResults.forEach(function(r) {
+          r.items.forEach(function(it) {
+            var k = it.id+'';
+            if (!seen[k]) { seen[k]=true; foundItems.push(it); }
+          });
+        });
+        foundItems.sort(function(a,b){return (b.sim||0)-(a.sim||0);});
+
+        // not found words
+        var notFound = searchResults.filter(function(r){return !r.items.length;}).map(function(r){return r.q;});
+        pipeline.search.notFound = notFound;
+        pipeline.search.found = foundItems.length;
+        pipeline.search.items = foundItems.slice(0,4);
+        pipeline.search.ms = Date.now() - t2;
+        totalFound += foundItems.length;
+        updatePipeStep(3, foundItems.length>0, '✓ '+foundItems.length+' товаров ('+(Date.now()-t2)+'ms)');
+        document.getElementById('p3-body').textContent = JSON.stringify({queries:queries,found:foundItems.length,notFound:notFound},null,2);
+      } catch(e) {
+        updatePipeStep(3, false, '✗ ошибка');
+        document.getElementById('p3-body').textContent = e.message;
+      }
+    } else {
+      updatePipeStep(3, 'skip', '— нет запросов для поиска');
+    }
+  } else {
+    updatePipeStep(3, 'skip', '— не нужен для «'+intent+'»');
+    document.getElementById('p3-body').textContent = '(поиск не нужен для этого намерения)';
+  }
+
+  // ── RENDER RESPONSE ──
+  var botMsg = aiResult ? (aiResult.message || 'Готово.') : 'Обрабатываю...';
+
+  // Dialog thread update
+  if (intent === 'dialog' || intent === 'mood') {
+    dialogThread.push({role:'user', text:q});
+    dialogThread.push({role:'bot', text:botMsg});
+    totalDialog++;
+    if (dialogThread.length > 1) {
+      addBubble('thread', '💬 диалог продолжается');
+    }
+  }
+
+  addBubble('bot', botMsg, intent, foundItems, pipeline.search.notFound||[], aiResult, intent);
+
+  // Update user view panel
+  updateUserView(q, intent, botMsg, foundItems, pipeline.search.notFound||[]);
+
+  // Final
+  pipeline.final = {intent:intent, found:foundItems.length, items:foundItems.slice(0,4), response:botMsg};
+  
+  // Save
+  history_.unshift({
+    id:pipeline.id, ts:pipeline.ts, query:q,
+    intent:intent, found:foundItems.length, response:botMsg
+  });
+  if(history_.length>100)history_=history_.slice(0,100);
+  localStorage.setItem('yovar_combo_hist_v2', JSON.stringify(history_));
+
+  if(currentTab==='history') renderDebugTab('history');
+  if(currentTab==='intent') renderDebugTab('intent');
+  updateStats();
+  document.getElementById('send-btn').disabled = false;
+  scrollChat();
+}
+
+// ── ADD BUBBLE ──
+function addBubble(role, text, intent, items, notFound, aiData, intentId) {
+  var el = document.getElementById('chat-messages');
+  var div = document.createElement('div');
+
+  if (role === 'user') {
+    div.className = 'msg-user';
+    div.textContent = text;
+  } else if (role === 'thread') {
+    div.className = 'thread-indicator';
+    div.textContent = text;
+  } else if (role === 'typing') {
+    div.className = 'msg-bot typing';
+    div.id = 'typing-bubble';
+    div.textContent = '⏳ ' + text;
+  } else {
+    div.className = 'msg-bot';
+    var intentObj = INTENTS.find(function(x){return x.id===intent;});
+    var intentColor = intentObj ? intentObj.color : '#666';
+    var intentName = intentObj ? intentObj.name : intent;
+
+    var html = '';
+    if (intentId) {
+      html += '<div class="msg-intent" style="background:'+intentColor+'22;color:'+intentColor+';border:1px solid '+intentColor+'44">'+intentName+'</div>';
+    }
+    html += '<div>'+escapeHtml(text)+'</div>';
+
+    // Cards
+    if (items && items.length) {
+      html += '<div class="msg-cards">';
+      items.slice(0,5).forEach(function(it) {
+        html += '<div class="msg-card">'
+          +'<div><div class="mc-name">'+escapeHtml(it.name||'')+'</div>'
+          +'<div class="mc-shop">'+(it.merchant_name||it.shop_name||'')+'</div></div>'
+          +'<div class="mc-right"><span class="mc-price">'+(it.price||0)+' сом</span>'
+          +'<button class="mc-btn">+ В корзину</button></div>'
+          +'</div>';
+      });
+      if (items.length > 5) {
+        html += '<button class="load-more-btn">Загрузить ещё (' + (items.length - 5) + '+)</button>';
+      }
+      html += '</div>';
+    }
+
+    // Not found
+    if (notFound && notFound.length) {
+      html += '<div class="msg-not-found">⚠️ Не нашлось в каталоге: '+escapeHtml(notFound.join(', '))+'</div>';
+    }
+
+    div.innerHTML = html;
+  }
+
+  el.appendChild(div);
+}
+
+function escapeHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function scrollChat() {
+  var el = document.getElementById('chat-messages');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── DEBUG ──
+function initPipelineDebug() {
+  var html = '';
+  STEP_LABELS.forEach(function(label, i) {
+    var n = i+1;
+    var colors = ['#7c6af5','#5dcaa5','#f5a623'];
+    html += '<div class="pipe-step">'
+      +'<div class="pipe-head">'
+      +'<div class="pipe-num" style="background:'+colors[i]+'22;color:'+colors[i]+'">'+n+'</div>'
+      +'<div class="pipe-title">'+label+'</div>'
+      +'<div class="pipe-badge pb-wait" id="pb'+n+'">ожидание</div>'
+      +'</div>'
+      +'<div class="pipe-body"><pre class="pipe-pre" id="p'+n+'-body">—</pre></div>'
+      +'</div>';
+  });
+  return html;
+}
+
+function updatePipeStep(n, ok, text) {
+  var el = document.getElementById('pb'+n);
+  if (!el) return;
+  el.className = 'pipe-badge '+(ok===null?'pb-wait':ok==='run'?'pb-run':ok==='ok'||ok===true?'pb-ok':ok===false?'pb-err':'pb-skip');
+  el.textContent = text;
+}
+
+function renderDebug() {
+  renderDebugTab(currentTab);
+}
+
+function renderDebugTab(tab) {
+  var el = document.getElementById('debug-content');
+  if (tab === 'pipeline') {
+    el.innerHTML = '<div class="pipeline">' + initPipelineDebug() + '</div>';
+    if (currentPipeline) {
+      // restore values
+      document.getElementById('p1-body').textContent = JSON.stringify(currentPipeline.classifier, null, 2);
+      document.getElementById('p2-body').textContent = currentPipeline.prompt_call.parsed ? JSON.stringify(currentPipeline.prompt_call.parsed,null,2) : '—';
+      document.getElementById('p3-body').textContent = JSON.stringify(currentPipeline.search,null,2);
+    }
+  } else if (tab === 'intent') {
+    if (!currentPipeline) { el.innerHTML = '<div style="color:var(--text2);padding:20px;text-align:center;font-size:11px">Запустите тест</div>'; return; }
+    var p = currentPipeline;
+    var intentObj = INTENTS.find(function(x){return x.id===p.classifier.intent;}) || {};
+    el.innerHTML = '<div class="intent-detail">'
+      +'<div class="id-label">Намерение</div>'
+      +'<div class="id-value" style="color:'+(intentObj.color||'#fff')+'">'+(intentObj.name||p.classifier.intent||'—')+'</div>'
+      +'<div class="id-row"><span>Метод</span><span class="id-val">'+(p.classifier.method||'—')+'</span></div>'
+      +'<div class="id-row"><span>Время</span><span class="id-val">'+(p.classifier.ms||0)+'ms</span></div>'
+      +'<div class="id-row"><span>Блок</span><span class="id-val">'+(intentObj.block||'—')+'</span></div>'
+      +'<div class="id-row"><span>Описание</span><span class="id-val" style="font-size:10px">'+(intentObj.desc||'—')+'</span></div>'
+      +'</div>'
+      +(p.prompt_call.parsed ? '<div class="intent-detail"><div class="id-label">Ответ промпта</div><pre class="pipe-pre">'+JSON.stringify(p.prompt_call.parsed,null,2)+'</pre></div>' : '')
+      +(p.final.found ? '<div class="intent-detail"><div class="id-label">Найдено товаров</div><div class="id-value">'+p.final.found+'</div></div>' : '');
+  } else if (tab === 'prompts') {
+    var html = '<div class="prompt-selector">';
+    var blocks = {};
+    INTENTS.forEach(function(it){
+      if(!blocks[it.block]) blocks[it.block]=[];
+      blocks[it.block].push(it);
+    });
+    Object.keys(blocks).forEach(function(block){
+      html += '<div style="font-size:9px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;padding:6px 0 4px">'+block+'</div>';
+      blocks[block].forEach(function(it){
+        var active = currentPipeline && currentPipeline.classifier.intent===it.id;
+        var cls = active ? 'ps-item active' : 'ps-item';
+        var nameColor = active ? it.color : 'var(--text)';
+        var tagText = active ? '▶' : '·';
+        html += '<div class="'+cls+'" data-intent-id="'+it.id+'" style="cursor:pointer">'
+          +'<div class="ps-num">'+it.n+'</div>'
+          +'<div style="flex:1">'
+          +'<div class="ps-name" style="color:'+nameColor+'">'+it.name+'</div>'
+          +'<div class="ps-desc">'+it.desc+'</div>'
+          +'</div>'
+          +'<div style="display:flex;align-items:center;gap:5px">'
+          +'<div class="ps-tag" style="background:'+it.color+'22;color:'+it.color+';border:1px solid '+it.color+'44">'+tagText+'</div>'
+          +'<div style="font-size:9px;color:var(--text2)">👁</div>'
+          +'</div>'
+          +'</div>';
+      });
+    });
+    html += '</div>';
+    el.innerHTML = html;
+    // Attach click handlers after innerHTML set
+    el.querySelectorAll('[data-intent-id]').forEach(function(div){
+      div.addEventListener('click', function(){ showPromptModal(div.getAttribute('data-intent-id')); });
+    });
+  } else if (tab === 'history') {
+    if (!history_.length) { el.innerHTML = '<div style="color:var(--text2);padding:20px;text-align:center;font-size:11px">История пуста</div>'; return; }
+    var html2 = '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">'
+      +'<button class="hist-dl-btn" onclick="downloadHistoryJSON()">↓ Скачать JSON</button>'
+      +'</div>'
+      +'<div class="hist-list-d">';
+    history_.forEach(function(e,i){
+      var intentObj = INTENTS.find(function(x){return x.id===e.intent;}) || {color:'#666',name:e.intent||'?'};
+      var t = new Date(e.ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
+      html2 += '<div class="hist-entry" onclick="loadHistEntry('+i+')">'
+        +'<div class="he-query">'+escapeHtml(e.query)+'</div>'
+        +'<div style="font-size:10px;color:var(--text2);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escapeHtml(e.response||'')+'</div>'
+        +'<div class="he-meta">'
+        +'<span class="he-badge" style="background:'+intentObj.color+'22;color:'+intentObj.color+'">'+intentObj.name+'</span>'
+        +(e.found?'<span class="he-badge" style="background:#0a2010;color:var(--accent2)">'+e.found+' товаров</span>':'')
+        +'<span class="he-time">'+t+'</span>'
+        +'</div>'
+        +'</div>';
+    });
+    html2 += '</div>';
+    el.innerHTML = html2;
+  }
+}
+
+function loadHistEntry(i) {
+  document.getElementById('chat-inp').value = history_[i].query;
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.dtab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById('tab-'+tab).classList.add('active');
+  renderDebugTab(tab);
+}
+
+function updateStats() {
+  document.getElementById('s-total').textContent = history_.length;
+  document.getElementById('s-found').textContent = totalFound;
+  document.getElementById('s-dialog').textContent = totalDialog;
+}
+
+// ── USER VIEW PANEL UPDATE ──
+function updateUserView(query, intent, response, items, notFound) {
+  var panel = document.getElementById('user-view-panel');
+  if (!panel) return;
+  var intentObj = INTENTS.find(function(x){return x.id===intent;}) || {color:'#666',name:intent||'?'};
+
+  var cardsHtml = '';
+  if (items && items.length) {
+    cardsHtml = '<div class="uvb-cards">';
+    items.slice(0,5).forEach(function(it){
+      cardsHtml += '<div class="uvb-card">'
+        +'<div><div class="uvb-card-name">'+escapeHtml(it.name||'')+'</div>'
+        +'<div class="uvb-card-shop">'+(it.merchant_name||it.shop_name||'')+'</div></div>'
+        +'<span class="uvb-card-price">'+(it.price||0)+' сом</span>'
+        +'</div>';
+    });
+    if (items.length > 5) {
+      cardsHtml += '<div style="font-size:9px;color:var(--text2);padding:4px 0;text-align:center">+ ещё '+(items.length-5)+'...</div>';
+    }
+    cardsHtml += '</div>';
+  }
+
+  var notFoundHtml = '';
+  if (notFound && notFound.length) {
+    notFoundHtml = '<div class="uvb-not-found">⚠️ Не нашлось: '+escapeHtml(notFound.join(', '))+'</div>';
+  }
+
+  panel.innerHTML = '<div class="user-view-banner">'
+    +'<div class="uvb-head">'
+    +'<span class="uvb-title">👁 ответ Ёвара</span>'
+    +'<span class="uvb-badge" style="background:'+intentObj.color+'22;color:'+intentObj.color+';border:1px solid '+intentObj.color+'44">'+intentObj.name+'</span>'
+    +'</div>'
+    +'<div class="uvb-body">'
+    +'<div class="uvb-query">Запрос: <span>'+escapeHtml(query)+'</span></div>'
+    +'<div class="uvb-response">'+escapeHtml(response||'...')+'</div>'
+    +cardsHtml
+    +notFoundHtml
+    +'</div>'
+    +'</div>';
+}
+
+// ── DOWNLOAD HISTORY JSON ──
+function downloadHistoryJSON() {
+  var blob = new Blob([JSON.stringify(history_, null, 2)], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'yovar_combo_history_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+}
+
+// ── SHOW PROMPT MODAL ──
+function showPromptModal(intentId) {
+  var intentObj = INTENTS.find(function(x){return x.id===intentId;});
+  if (!intentObj) return;
+  var promptFn = PROMPTS[intentId];
+  var promptText = promptFn ? promptFn('[запрос пользователя]', []) : '(промпт не найден)';
+
+  var overlay = document.createElement('div');
+  overlay.className = 'prompt-modal-overlay';
+  overlay.onclick = function(e){ if(e.target===overlay) overlay.remove(); };
+
+  overlay.innerHTML = '<div class="prompt-modal">'
+    +'<div class="pm-head">'
+    +'<div>'
+    +'<div class="pm-title" style="color:'+intentObj.color+'">'+intentObj.name+'</div>'
+    +'<div style="font-size:10px;color:var(--text2);margin-top:2px">'+intentObj.desc+'</div>'
+    +'</div>'
+    +'<div class="pm-close" id="pm-close-btn">✕</div>'
+    +'</div>'
+    +'<div class="pm-body">'
+    +'<div class="pm-tag-row">'
+    +'<span class="pm-tag" style="background:'+intentObj.color+'22;color:'+intentObj.color+';border-color:'+intentObj.color+'44">'+intentObj.block+'</span>'
+    +'<span class="pm-tag" style="background:#1a1a1a;color:var(--text2);border-color:#333">промпт #'+intentObj.n+'</span>'
+    +'</div>'
+    +'<pre>'+escapeHtml(promptText)+'</pre>'
+    +'</div>'
+    +'</div>';
+
+  document.body.appendChild(overlay);
+  // Attach close button listener after DOM insert
+  var closeBtn = overlay.querySelector('#pm-close-btn');
+  if (closeBtn) closeBtn.addEventListener('click', function(){ overlay.remove(); });
+}
+
+function clearAll() {
+  if (!confirm('Очистить историю и чат?')) return;
+  history_ = [];
+  localStorage.removeItem('yovar_combo_hist_v2');
+  totalFound = 0; totalDialog = 0;
+  dialogThread = []; dialogActive = false;
+  currentPipeline = null;
+  document.getElementById('chat-messages').innerHTML = '';
+  document.getElementById('empty-state').style.display = 'flex';
+  document.getElementById('chat-messages').appendChild(document.getElementById('empty-state') || (function(){
+    var d=document.createElement('div');
+    d.className='empty-chat';d.id='empty-state';
+    d.innerHTML='<div class="empty-logo">Ёвар<span>.</span></div><div class="empty-sub">14 специализированных промптов.<br>Напишите запрос — система определит намерение и выберет нужный промпт.</div>';
+    return d;
+  })());
+  renderDebug();
+  updateStats();
+  renderIntentChips();
+}
+</script>
+</body>
+</html>
