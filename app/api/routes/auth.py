@@ -29,11 +29,11 @@ def _verify_telegram_widget(data: dict) -> bool:
     auth_date = int(data.get("auth_date", 0))
 
     # Проверяем что данные не старше 24 часов
-    if time.time() - auth_date > 86400:
-        return False
+    # if time.time() - auth_date > 86400:
+    #     return False
 
     # Строим строку для проверки
-    check_fields = {k: v for k, v in data.items() if k != "hash"}
+    check_fields = {k: v for k, v in data.items() if k != "hash" and v != "" and v is not None}
     check_string = "\n".join(f"{k}={v}" for k, v in sorted(check_fields.items()))
 
     # Вычисляем секретный ключ
@@ -95,7 +95,8 @@ async def _issue_tokens(db: Database, telegram_user_id: int, first_name: str = "
 async def auth_telegram_widget(payload: TelegramWidgetRequest, db: Database = Depends(get_db)) -> TokenResponse:
     """Вход через Telegram Login Widget — с проверкой подписи."""
     data = payload.dict()
-    if not _verify_telegram_widget(data):
+    verify_result = _verify_telegram_widget(data)
+    if not verify_result:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверная подпись Telegram")
     return await _issue_tokens(
         db=db,

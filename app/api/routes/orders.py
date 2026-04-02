@@ -34,11 +34,15 @@ async def _assert_order_access(db: Database, user: CurrentUser, order_id: int) -
     if not order:
         raise HTTPException(status_code=404, detail="Заказ не найден")
 
+    if user.role == "admin":
+        return order
     if user.role == "client":
         if int(order["client_user_id"]) != user.user_id:
             raise HTTPException(status_code=403, detail="Нет доступа к заказу")
         return order
 
+    if int(order["client_user_id"]) == user.user_id:
+        return order
     allowed = await _allowed_shop_ids(db, user)
     if int(order["shop_id"]) not in allowed:
         raise HTTPException(status_code=403, detail="Нет доступа к заказу")

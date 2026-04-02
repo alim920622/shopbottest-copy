@@ -474,32 +474,3 @@ async def yovar_multi(payload: YovarMultiPayload, db: Database = Depends(get_db)
     """
     intents = await analyze_multi_intent(payload.query)
     return {"intents": intents, "count": len(intents)}
-
-
-# ============================================================
-# ЛОГИРОВАНИЕ ЗАПРОСОВ ЁВАРА
-# ============================================================
-
-class YovarLogPayload(BaseModel):
-    query: str
-    intent: str = "unknown"
-    found_count: int = 0
-    not_found: list = []
-    response_ms: int = 0
-
-
-@router.post("/log")
-async def yovar_log(payload: YovarLogPayload, db: Database = Depends(get_db)):
-    """
-    Анонимное логирование запросов пользователей к Ёвару.
-    Используется для анализа качества и улучшения промптов.
-    """
-    try:
-        async with db.conn() as conn:
-            await conn.execute(
-                "INSERT INTO yovar_logs (query, intent, found_count, not_found, response_ms) VALUES (?, ?, ?, ?, ?)",
-                (payload.query, payload.intent, payload.found_count, payload.not_found, payload.response_ms)
-            )
-    except Exception as e:
-        print(f"yovar_log error: {e}")
-    return {"ok": True}

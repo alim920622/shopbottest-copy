@@ -93,3 +93,27 @@ async def get_stats(secret: str = Query(...), db: Database = Depends(get_db)):
         cur = await conn.execute("SELECT COUNT(*) as cnt FROM products WHERE is_active=1")
         stats["products_active"] = (await cur.fetchone())["cnt"]
         return stats
+
+from pydantic import BaseModel
+from typing import Optional
+
+class ShopCreate(BaseModel):
+    name: str
+    business_type: str  # "restaurant" или "shop"
+    address: str
+    phone: str
+    description: Optional[str] = None
+    is_active: bool = True
+
+@router.post("/shops")
+async def create_shop(payload: ShopCreate, secret: str = Query(...), db: Database = Depends(get_db)):
+    check_secret(secret)
+    if payload.business_type not in ("restaurant", "shop"):
+        raise HTTPException(status_code=400, detail="business_type must be 'restaurant' or 'shop'")
+    async with db.conn() as conn:
+        cur = await conn.execute(
+            "INSERT INTO shops (name, business_type, address, phone, is_active) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+            (payload.name, payload.business_type, payload.address, payload.phone, payload.is_active)
+        )
+        row = await cur.fetchone()
+        return {"id": row["id"], "name": payload.name, "business_type": payload.business_type}
